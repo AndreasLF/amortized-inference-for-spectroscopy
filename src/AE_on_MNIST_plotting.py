@@ -71,7 +71,7 @@ def plot_loss(epochs, train_losses, test_losses):
 
 # Load model file
 dill_file = "MNISTautoencoder_2023-03-14_5epochs.dill"
-with open(f'{results_dir}/dill_file', 'rb') as f:
+with open(f'{results_dir}/{dill_file}', 'rb') as f:
     model_data = dill.load(f)
 
 # Unpack model data
@@ -84,26 +84,3 @@ test_losses = model_data['test_loss']
 # Plot the training and validation loss
 plot_loss(epochs, train_losses, test_losses)
 
-
-
-
-
-# Load the MNIST data
-dset_train = torchvision.datasets.MNIST("./", train=True, transform=flatten)
-dset_test  = torchvision.datasets.MNIST("./", train=False, transform=flatten)
-
-classes = [0,1]
-batch_size = 64
-train_loader = torch.utils.data.DataLoader(dset_train, batch_size=batch_size,
-                          sampler=stratified_sampler(dset_train.targets, classes), pin_memory=cuda)
-test_loader  = torch.utils.data.DataLoader(dset_test, batch_size=batch_size, 
-                          sampler=stratified_sampler(dset_test.targets, classes), pin_memory=cuda)
-
-
-
-
-# Loop through points in dataset and plot them
-for i, (x, y) in enumerate(test_loader):
-    z = autoencoder.encoder(x.to(device))
-    z = z.to('cpu').detach().numpy()
-    plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
