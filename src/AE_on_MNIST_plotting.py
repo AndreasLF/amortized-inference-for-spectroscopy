@@ -102,7 +102,5 @@ for i, (x, y) in enumerate(train_loader):
     z = autoencoder.encoder(x.to(device))
     z = z.to('cpu').detach().numpy()
 
-    print(z.shape)
     plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
-    break
 plt.show()
