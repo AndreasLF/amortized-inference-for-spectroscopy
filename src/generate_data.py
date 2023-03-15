@@ -27,8 +27,7 @@ def generate_SERS_dataset(data_points):
     X_col = []
     y_col = []
 
-    for i in range(data_points):
-            
+    for i in range(data_points):   
         # Randmon float between 0 and 500
         # gen.c = np.random.uniform(0,500, size=(1,1))
         gen = SERSGenerator((20,20), 500, seed=None, eta=[0,0])
