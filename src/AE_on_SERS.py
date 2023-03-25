@@ -2,15 +2,13 @@ import torch; torch.manual_seed(0)
 import torch.nn as nn
 import torch.utils
 import torch.distributions
-import torchvision
 import numpy as np
 import dill
 from tqdm import tqdm
 from datetime import date
 import os
-import sys
 import datetime as dt
-from matplotlib import pyplot as plt
+import wandb
 
 
 # Get working directory, parent directoy, data and results directory
@@ -26,6 +24,43 @@ from SERS_dataset import SERSDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
+
+
+batch_size = 2
+epochs = 2
+latent_dims = 2
+optimizer = "adam"
+learning_rate = 0.001
+num_batches_per_epoch = 1
+
+
+#==============================================================================
+# Initialize logging
+#==============================================================================
+# start a new wandb run to track this script
+run = wandb.init(
+    # set the wandb project where this run will be logged
+    project="amortized-inference-for-spectroscopy",
+    
+    # track hyperparameters and run metadata
+    config={
+    "architecture": "VanillaVAE",
+    "dataset": "IterDataset",
+    "num_peaks": 1,
+    "num_hotspots": 1,
+    "batch_size": batch_size,
+    "epochs": epochs,
+    "latent_space_dims": latent_dims,
+    "optimizer": optimizer,
+    "learning_rate": learning_rate,
+    "num_batches_per_epoch": num_batches_per_epoch
+    }
+)
+
+
+#==============================================================================
+# Autoencoder
+#==============================================================================
 
 class Autoencoder(nn.Module):
     """ The autoencoder is a combination of the encoder and decoder
@@ -43,7 +78,7 @@ class Autoencoder(nn.Module):
         z = self.encoder(x)
         return self.decoder(z)
     
-def train(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = 0):
+def train(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = 0, lr = 0.001):
     """ Train the autoencoder on the data for a number of epochs
     
     Args:
@@ -86,6 +121,7 @@ def train(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoc
             if type(train_loader.dataset) == IterDataset and i == num_iterations_per_epoch:
                 break
         train_loss.append(np.mean(batch_loss))
+        wandb.log({"train_loss": np.mean(batch_loss)})
 
         with torch.no_grad():
             autoencoder.eval()
@@ -98,6 +134,8 @@ def train(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoc
             valid_loss.append(loss.item())
 
         test_loss.append(np.mean(valid_loss))
+        wandb.log({"test_loss": np.mean(valid_loss)})
+
         
     return autoencoder, train_loss, test_loss
 
@@ -124,8 +162,6 @@ test_loader = torch.utils.data.DataLoader(dset_test, batch_size=batch_size, pin_
 # Define the model
 # ==============================================================================
 
-latent_dims = 2
-
 encoder = nn.Sequential(
             nn.Linear(in_features=500, out_features=128),
             nn.ReLU(),
@@ -142,26 +178,21 @@ decoder = nn.Sequential(
 
 autoencoder = Autoencoder(encoder, decoder, latent_dims).to(device) 
 
-print(autoencoder)
-
 #==============================================================================
 # Train the model
 #==============================================================================
 
-epochs = 100
-optimizer = 'adam'
-autoencoder, train_loss, test_loss = train(autoencoder, train_loader, optimizer=optimizer, epochs=epochs)
+autoencoder, train_loss, test_loss = train(autoencoder, train_loader, 
+                                           optimizer=optimizer, epochs=epochs, 
+                                           num_iterations_per_epoch=num_batches_per_epoch,
+                                           lr=learning_rate,)
 
-today = date.today()
-time_now = dt.datetime.now()
-
-# Make dictionary with all the information
-dictionary = {'model': autoencoder, 'train_loss': train_loss, 'test_loss': test_loss, 
-              'epochs': epochs, 'optimizer': optimizer, "latent_space_dims": latent_dims, 
-              'date': today, "train_data": train_data, "test_data": test_data, "time": time_now}
 
 # save the model
-with open(f'{results_dir}/SERS_autoencoder_{today}_{epochs}epochs_{latent_dims}latdims_{optimizer}.dill', 'wb') as f:
-    dill.dump(dictionary, f)
+with open(f'{results_dir}/wandb/{run.name}.dill', 'wb') as f:
+    dill.dump(autoencoder, f)
 
+artifact = wandb.Artifact('model', type='dill')
+artifact.add_file(f'{results_dir}/wandb/{run.name}.dill')
+run.log_artifact(artifact)
 
