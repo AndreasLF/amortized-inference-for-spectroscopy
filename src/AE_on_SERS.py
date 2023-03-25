@@ -10,6 +10,7 @@ from datetime import date
 import os
 import sys
 import datetime as dt
+from matplotlib import pyplot as plt
 
 
 # Get working directory, parent directoy, data and results directory
@@ -25,36 +26,6 @@ from SERS_dataset import SERSDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
-
-def flatten(x):
-    """Transforms a 28x28 image into a 784 vector
-    From 02456 Deep Learning course https://github.com/DeepLearningDTU/02456-deep-learning-with-PyTorch
-    
-    
-    Args:
-        x (Tensor): a 28x28 image
-
-    Returns:
-        Tensor: a 784 vector
-    """
-    tt = torchvision.transforms.ToTensor()
-    return tt(x).view(28**2)
-
-def stratified_sampler(labels, classes):
-    """Sampler only picks datapoints in specified classes
-    From 02456 Deep Learning course https://github.com/DeepLearningDTU/02456-deep-learning-with-PyTorch
-    
-    Args:
-        labels (Tensor): a tensor of labels
-        classes (list): a list of classes to sample from
-    
-    Returns:
-        SubsetRandomSampler: a sampler that only picks datapoints in specified classes
-    
-    """
-    (indices,) = np.where(np.array([i in classes for i in labels]))
-    indices = torch.from_numpy(indices)
-    return torch.utils.data.sampler.SubsetRandomSampler(indices)
 
 class Autoencoder(nn.Module):
     """ The autoencoder is a combination of the encoder and decoder
@@ -72,8 +43,7 @@ class Autoencoder(nn.Module):
         z = self.encoder(x)
         return self.decoder(z)
     
-
-def train(autoencoder, data, optimizer="SGD", epochs=30):
+def train(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = 0):
     """ Train the autoencoder on the data for a number of epochs
     
     Args:
@@ -89,11 +59,11 @@ def train(autoencoder, data, optimizer="SGD", epochs=30):
     if optimizer == 'adam':
         opt = torch.optim.Adam(autoencoder.parameters())
     else: 
-        opt = torch.optim.SGD(autoencoder.parameters(), lr=0.25)
+        opt = torch.optim.SGD(autoencoder.parameters(), lr=10)
 
     # The loss function is defined
     loss_function = nn.MSELoss()
-
+    
 
     train_loss = []
     test_loss = []
@@ -104,7 +74,7 @@ def train(autoencoder, data, optimizer="SGD", epochs=30):
         valid_loss = []
 
         # Loop through batches of train data
-        for x, y in data:
+        for i, (x, y) in enumerate(data):
             x = x.to(device)
             opt.zero_grad()
             x_hat = autoencoder(x)
@@ -113,7 +83,8 @@ def train(autoencoder, data, optimizer="SGD", epochs=30):
             opt.step()
 
             batch_loss.append(loss.item())
-
+            if type(train_loader.dataset) == IterDataset and i == num_iterations_per_epoch:
+                break
         train_loss.append(np.mean(batch_loss))
 
         with torch.no_grad():
@@ -130,14 +101,19 @@ def train(autoencoder, data, optimizer="SGD", epochs=30):
         
     return autoencoder, train_loss, test_loss
 
-
 #==============================================================================
 # Load the data
 #==============================================================================
-train_data = "1000_SERS_train_data_2023-03-15.csv"
-test_data = "1000_SERS_test_data_2023-03-15.csv"
-dset_train = SERSDataset(f"{data_dir}/SERS_data/{train_data}")
-dset_test = SERSDataset(f"{data_dir}/SERS_data/{test_data}")
+# train_data = "1000_SERS_train_data_2023-03-25.csv"
+# test_data = "1000_SERS_test_data_2023-03-25.csv"
+# dset_train = SERSDataset(f"{data_dir}/SERS_data/{train_data}")
+# dset_test = SERSDataset(f"{data_dir}/SERS_data/{test_data}")
+
+from generate_data import SERS_generator_function
+from SERS_dataset import SERSDataset, IterDataset
+
+dset_train = IterDataset(SERS_generator_function(single_spectrum=True, num_peaks=1, num_hotspots=1))
+dset_test = IterDataset(SERS_generator_function(single_spectrum=True, num_peaks=1, num_hotspots=1))
 
 # Load the SERS dataset
 batch_size = 100
@@ -168,12 +144,12 @@ autoencoder = Autoencoder(encoder, decoder, latent_dims).to(device)
 
 print(autoencoder)
 
-# #==============================================================================
-# # Train the model
-# #==============================================================================
+#==============================================================================
+# Train the model
+#==============================================================================
 
-epochs = 200
-optimizer = 'SGD'
+epochs = 100
+optimizer = 'adam'
 autoencoder, train_loss, test_loss = train(autoencoder, train_loader, optimizer=optimizer, epochs=epochs)
 
 today = date.today()
@@ -187,3 +163,5 @@ dictionary = {'model': autoencoder, 'train_loss': train_loss, 'test_loss': test_
 # save the model
 with open(f'{results_dir}/SERS_autoencoder_{today}_{epochs}epochs_{latent_dims}latdims_{optimizer}.dill', 'wb') as f:
     dill.dump(dictionary, f)
+
+

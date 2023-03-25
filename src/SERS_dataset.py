@@ -1,13 +1,22 @@
 import pandas as pd
 import torch as torch
 import os
- 
+from generate_data import SERS_generator_function
+
 # Get working directory, parent directoy, data and results directory
 cwd = os.getcwd()
 curr_script_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(curr_script_dir)
 results_dir = os.path.join(parent_dir, 'results')
 data_dir = os.path.join(parent_dir, 'data')
+
+
+class IterDataset(torch.utils.data.IterableDataset):
+    def __init__(self, generator):
+        self.generator = generator
+
+    def __iter__(self):
+        return self.generator
 
 class SERSDataset(torch.utils.data.Dataset):
     def __init__(self,file_name):
@@ -28,4 +37,5 @@ class SERSDataset(torch.utils.data.Dataset):
 
 
 if __name__ == "__main__":
-    dataset = SERSDataset(f"{data_dir}/SERS_data/1000_SERS_data_2023-03-15.csv")
+    # dataset = SERSDataset(f"{data_dir}/SERS_data/1000_SERS_data_2023-03-15.csv")
+    IterDataset(SERS_generator_function(single_spectrum = True))
