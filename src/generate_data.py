@@ -118,6 +118,9 @@ if __name__ == "__main__":
     n_train = int(n*split)
     n_test = int(n*(1-split))
 
+    df_train = generate_SERS_dataset(n_train)
+    df_test = generate_SERS_dataset(n_test)
+
     df_train.to_csv(f"{data_dir}/SERS_data/{n}_SERS_train_data_{today}.csv", index=False)
     df_test.to_csv(f"{data_dir}/SERS_data/{n}_SERS_test_data_{today}.csv", index=False)
 
