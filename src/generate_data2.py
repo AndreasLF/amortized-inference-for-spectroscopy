@@ -79,7 +79,7 @@ class pseudoVoigtSimulator:
 
         return vp
 
-    def gaussian_noise(self, K, n):
+    def gaussian_noise(self, K, sigma):
         """Get gaussian noise
         
         Args:
@@ -89,11 +89,12 @@ class pseudoVoigtSimulator:
         Returns:
             np.array: Gaussian noise
         """
-        gaussian_noise = np.random.normal(0, 0.1, K)
+        print("sigma ", sigma)
+        gaussian_noise = np.random.normal(0, sigma, K)
         # gaussian_noise = np.tile(gaussian_noise, (2, 1))
         return gaussian_noise
 
-    def generate_full_spectrum(self, peaks, gamma, eta, alpha):
+    def generate_full_spectrum(self, peaks, gamma, eta, alpha, noise_to_signal_ratio = 0.05):
         """Generate full spectrum
 
         Args:
@@ -105,12 +106,45 @@ class pseudoVoigtSimulator:
         Returns:
             np.array: Full spectrum
         """
+        sigma = np.sum(alpha)*noise_to_signal_ratio
+        
 
         alpha = np.tile(alpha, (self.wavenumbers, 1)).T
         Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta)
         voigt_with_alpha = Vp * alpha 
-        full_spectrum = np.sum(voigt_with_alpha, axis=0) + self.gaussian_noise(self.wavenumbers, 1)
+        full_spectrum = np.sum(voigt_with_alpha, axis=0) + self.gaussian_noise(self.wavenumbers, sigma)
         return full_spectrum
+
+
+
+    def generate_random_spectres(self, amount):
+        """Generate random spectra
+        
+        Args:
+            amount (int): Number of spectra
+            wavenumbers (np.array): Wavenumbers
+            peaks (np.array): Peak centers
+            gamma (np.array): Peak widths
+            eta (np.array): Mixing parameters
+            alpha (np.array): Peak heights
+        """
+
+        peaks = np.array([250])
+        gamma = np.array([20])
+        eta = np.array([0.5])
+        # Randomize alpha  with shape (amount, len(peaks))
+
+
+        alpha = np.random.uniform(0.5, 10, (amount, len(peaks)))
+
+        print(alpha)
+        random_spectra = np.zeros((amount, self.wavenumbers))
+        for i in range(amount):
+            ps = self.generate_full_spectrum(peaks, gamma, eta, alpha[i])
+            random_spectra[i] = ps
+
+        return random_spectra
+
 
 if __name__ == "__main__":
     c = np.array([250,350])
@@ -120,6 +154,11 @@ if __name__ == "__main__":
     # Vp = pseudo_voigt(500, c, gamma, eta)
     ps = pseudoVoigtSimulator(500)
     fs = ps.generate_full_spectrum(c, gamma, eta, alpha)
+    rs = ps.generate_random_spectres(5)
+    # print(rs.shape)
 
-    plt.plot(fs)
+    # plot all random spectra
+    for i in range(rs.shape[0]):
+        plt.plot(rs[i])
+
     plt.show()
