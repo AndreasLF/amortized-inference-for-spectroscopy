@@ -5,7 +5,7 @@ plt.style.use('seaborn')
 
 
 class pseudoVoigtSimulator:
-    def __init__(self, wavenumbers, peaks, gamma, eta, alpha):
+    def __init__(self, wavenumbers):
         """Simulate a pseudo-Voigt spectrum
         
         Args:
@@ -16,14 +16,6 @@ class pseudoVoigtSimulator:
             alpha (np.array): Peak heights
         """
         self.wavenumbers = wavenumbers
-        self.peaks = peaks
-        self.gamma = gamma
-        self.eta = eta
-        alpha = np.tile(alpha, (wavenumbers, 1)).T
-        self.Vp = self.pseudo_voigt(self.wavenumbers, self.peaks, self.gamma, self.eta)
-        self.voigt_with_alpha = self.Vp * alpha 
-        self.full_spectrum = np.sum(self.voigt_with_alpha, axis=0) + self.gaussian_noise(wavenumbers, 1)
-
 
     def lorentzian(self, w, c, gamma, height_nomralize=True):
         """Lorentzian function
@@ -87,7 +79,6 @@ class pseudoVoigtSimulator:
 
         return vp
 
-
     def gaussian_noise(self, K, n):
         """Get gaussian noise
         
@@ -100,11 +91,26 @@ class pseudoVoigtSimulator:
         """
         gaussian_noise = np.random.normal(0, 0.1, K)
         # gaussian_noise = np.tile(gaussian_noise, (2, 1))
-        print(gaussian_noise.shape)
         return gaussian_noise
 
+    def generate_full_spectrum(self, peaks, gamma, eta, alpha):
+        """Generate full spectrum
 
+        Args:
+            peaks (np.array): Peak centers
+            gamma (np.array): Peak widths
+            eta (np.array): Mixing parameters
+            alpha (np.array): Peak heights
 
+        Returns:
+            np.array: Full spectrum
+        """
+
+        alpha = np.tile(alpha, (self.wavenumbers, 1)).T
+        Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta)
+        voigt_with_alpha = Vp * alpha 
+        full_spectrum = np.sum(voigt_with_alpha, axis=0) + self.gaussian_noise(self.wavenumbers, 1)
+        return full_spectrum
 
 if __name__ == "__main__":
     c = np.array([250,350])
@@ -112,10 +118,8 @@ if __name__ == "__main__":
     eta = np.array([0.5,0.5])
     alpha = np.array([1,2])
     # Vp = pseudo_voigt(500, c, gamma, eta)
-    ps = pseudoVoigtSimulator(500, c, gamma, eta, alpha)
+    ps = pseudoVoigtSimulator(500)
+    fs = ps.generate_full_spectrum(c, gamma, eta, alpha)
 
-    # plt.plot(ps.noisy_spectra[0])
-    # plt.plot(ps.noisy_spectra[1])
-    plt.plot(ps.full_spectrum)
-    # ps.gaussian_noise(500, c)
+    plt.plot(fs)
     plt.show()
