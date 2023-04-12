@@ -95,7 +95,7 @@ class pseudoVoigtSimulator:
         # gaussian_noise = np.tile(gaussian_noise, (2, 1))
         return gaussian_noise
 
-    def generate_full_spectrum(self, peaks, gamma, eta, alpha, noise_to_signal_ratio = 0.05):
+    def generate_full_spectrum(self, peaks, gamma, eta, alpha, sigma = 0.5):
         """Generate full spectrum
 
         Args:
@@ -108,7 +108,7 @@ class pseudoVoigtSimulator:
             np.array: Full spectrum
         """
 
-        sigma = np.sum(alpha)*noise_to_signal_ratio
+        # sigma = np.sum(alpha)*noise_to_signal_ratio
 
         alpha = np.tile(alpha, (self.wavenumbers, 1)).T
         Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta)
@@ -352,12 +352,10 @@ if __name__ == "__main__":
     eta = np.array([0.5,0.5])
     alpha = np.array([1,1])
 
-    s = ps.generate_full_spectrum(peaks, gamma, eta, alpha, noise_to_signal_ratio=0.05)
+    s = ps.generate_full_spectrum(peaks, gamma, eta, alpha, sigma = 0.5)
 
     plt.plot(s)
     plt.show()
-
-    
 
     # n_train = 100
     # train_test_split = 0.8
