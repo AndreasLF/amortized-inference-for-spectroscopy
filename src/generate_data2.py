@@ -251,7 +251,8 @@ class pseudoVoigtSimulatorTorch:
         """
         ws = torch.arange(W)
 
-        K = 1 if not c.size() else c.size()
+        K = 1 if not c.shape else c.shape[0] 
+
 
         wavenumbers = torch.tile(ws, (K, 1))
         cs = torch.tile(c, (W, 1)).T
@@ -279,7 +280,7 @@ class pseudoVoigtSimulatorTorch:
             gaussian_noise = torch.distributions.normal.Normal(0, sigma).sample((K,))
             return gaussian_noise
 
-    def generate_full_spectrum(self, peaks, gamma, eta, alpha, noise_to_signal_ratio = 0.05):
+    def generate_full_spectrum(self, peaks, gamma, eta, alpha, sigma = 0.5):
         """Generate full spectrum
 
         Args:
@@ -292,7 +293,7 @@ class pseudoVoigtSimulatorTorch:
             np.array: Full spectrum
         """
 
-        sigma = torch.sum(alpha)*noise_to_signal_ratio
+        # sigma = torch.sum(alpha)*noise_to_signal_ratio
 
         alpha = torch.tile(alpha, (self.wavenumbers, 1)).T
         Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta)
@@ -300,6 +301,48 @@ class pseudoVoigtSimulatorTorch:
         full_spectrum = torch.sum(voigt_with_alpha, axis=0) + self.gaussian_noise(self.wavenumbers, sigma)
         return full_spectrum
 
+    def generator(self, K, peaks = torch.tensor([250]), gamma = torch.tensor([20]), 
+                  eta = torch.tensor([0.5]), alpha = torch.tensor([5]), sigma = 0.5):
+        """Generator for random spectra
+
+        Args:
+            K (int): Number of spectra
+            peaks (tuple, optional): Peak centers. Defaults to torch.tensor([250]). If tuple, random numbers between the two values will be picked.
+            gamma (tuple, optional): Peak widths. Defaults to torch.tensor([20]). If tuple, random numbers between the two values will be picked.
+            eta (tuple, optional): Mixing parameters. Defaults to torch.tensor([0.5]). If tuple, random numbers between the two values will be picked.
+            alpha (tuple, optional): Peak heights. Defaults to torch.tensor([5]). If tuple, random numbers between the two values will be picked.
+            sigma (float, optional): Noise to signal ratio. Defaults to 0.5.
+
+        Yields:
+            torch.tensor: Full spectrum
+        """
+        c = peaks
+        g = gamma
+        e = eta
+        a = alpha
+        
+        while True:
+            # Randomize peaks
+            if isinstance(peaks, tuple):
+                # pick random number between 1 and 10
+                c = torch.rand(K,) * peaks[1] + peaks[0]
+
+            if isinstance(gamma, tuple):
+                # pick random number between 1 and 10
+                g = torch.rand(K,) * gamma[1] + gamma[0]
+            
+            if isinstance(eta, tuple):
+                # pick random number between 1 and 10
+                e = torch.rand(K,) * eta[1] + eta[0]
+            
+            # if alpha is tuple then randomize
+            if isinstance(alpha, tuple):
+                # pick random number between 1 and 10
+                a = torch.rand(K,) * alpha[1] + alpha[0]
+        
+            parameters = torch.stack((c, g, e, a))
+
+            yield self.generate_full_spectrum(c, g, e, a, sigma), parameters
 
 
     def generate_random_spectra(self, amount):
@@ -334,8 +377,10 @@ class pseudoVoigtSimulatorTorch:
 
 if __name__ == "__main__":
 
+
+
     wavenumbers = 500
-    ps = pseudoVoigtSimulator(wavenumbers)
+    ps = pseudoVoigtSimulatorTorch(wavenumbers)
     # s = ps.generate_full_spectrum(np.array([250]), np.array([20]), np.array([0.5]), np.array([1]), noise_to_signal_ratio=0)
     # print(s.shape)
 
@@ -346,16 +391,36 @@ if __name__ == "__main__":
 
 
 
+    peaks = torch.tensor([250])
+    gamma = torch.tensor([20])
+    eta = torch.tensor([0.5])
+    alpha = torch.tensor([0.5])
 
-    peaks = np.array([250,350])
-    gamma = np.array([20,20])
-    eta = np.array([0.5,0.5])
-    alpha = np.array([1,1])
+    for i, (s, y) in enumerate(ps.generator(1, peaks = (50,450),
+                    gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = (0.5,10), sigma = 0.5)):
+        print(y)
 
-    s = ps.generate_full_spectrum(peaks, gamma, eta, alpha, sigma = 0.5)
+        break
+        plt.plot(s)
+        if i == 10:
+            break
 
-    plt.plot(s)
     plt.show()
+    
+
+
+
+
+
+    # # peaks = np.array([250,350])
+    # # gamma = np.array([20,20])
+    # # eta = np.array([0.5,0.5])
+    # # alpha = np.array([1,1])
+
+    # s = ps.generate_full_spectrum(peaks, gamma, eta, alpha, sigma = 0.5)
+
+    # plt.plot(s)
+    # plt.show()
 
     # n_train = 100
     # train_test_split = 0.8
