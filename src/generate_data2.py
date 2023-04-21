@@ -200,7 +200,7 @@ class pseudoVoigtSimulatorTorch:
         """
         self.wavenumbers = wavenumbers
 
-    def lorentzian(self, w, c, gamma, height_nomralize=True):
+    def lorentzian(self, w, c, gamma):
         """Lorentzian function
         Args:
             w (np.array): wavenumber
@@ -209,17 +209,17 @@ class pseudoVoigtSimulatorTorch:
         Returns:
             np.array: The Lorentzian function
         """
-        if height_nomralize:
-            # Height normalized lorentzian
-            Ls = (1 / torch.pi * gamma) / ((w - c)**2 + gamma**2)
-            # divide by the maximum value
-            Ls = Ls / torch.max(Ls)
-            return Ls
-
-        else: 
-            return (1 / torch.pi * gamma) / ((w - c)**2 + gamma**2)
+        # if height_nomralize:
+        #     # Height normalized lorentzian
+        #     Ls = (1 / np.pi * gamma) / ((w - c)**2 + gamma**2)
+        #     # divide by the maximum value
+        #     Ls = Ls / torch.max(Ls)
+        #     return Ls
+        # 
+        # else: 
+        return (1 / np.pi * gamma) / ((w - c)**2 + gamma**2)
             
-    def gaussian(self, w, c, gamma, height_normalize=True):
+    def gaussian(self, w, c, gamma):
         """Gaussian function
         
         Args:
@@ -230,16 +230,16 @@ class pseudoVoigtSimulatorTorch:
         Returns:
             np.array: The Gaussian function
         """
-        if height_normalize:
-            # Height normalized gaussian
-            Gs = 1/(np.sqrt(2*torch.pi)*gamma) * torch.exp((-(w-c)**2)/(2*gamma**2))
-            # divide by the maximum value
-            Gs = Gs / torch.max(Gs)
-            return Gs
-        else: 
-            return 1/(torch.sqrt(2*np.pi)*gamma) * torch.exp((-(w-c)**2)/(2*gamma**2))
+        # if height_normalize:
+        #     # Height normalized gaussian
+        #     Gs = 1/(np.sqrt(2*torch.pi)*gamma) * torch.exp((-(w-c)**2)/(2*gamma**2))
+        #     # divide by the maximum value
+        #     Gs = Gs / torch.max(Gs)
+        #     return Gs
+        # else: 
+        return 1/(np.sqrt(2*np.pi)*gamma) * torch.exp((-(w-c)**2)/(2*gamma**2))
 
-    def pseudo_voigt(self, W, c, gamma, eta, height_normalize=True):
+    def pseudo_voigt(self, W, c, gamma, eta, height_normalize=False, wavenumber_normalize=False, batch_size=1):
         """Pseudo-Voigt function
         Args:
             W (np.array): Wavenumbers
@@ -249,18 +249,25 @@ class pseudoVoigtSimulatorTorch:
         Returns:
             np.array: The pseudo-Voigt function
         """
-        ws = torch.arange(W)
+        # ws = torch.arange(W)
+        if wavenumber_normalize:
+            ws = torch.linspace(0, 1, W)
+            gamma = gamma / W
+            c = c / W
+        else: 
+            ws = torch.arange(W)
 
         K = 1 if not c.shape else c.shape[0] 
-
 
         wavenumbers = torch.tile(ws, (K, 1))
         cs = torch.tile(c, (W, 1)).T
         gammas = torch.tile(gamma, (W, 1)).T
         etas = torch.tile(eta, (W, 1)).T
         
-        vp = etas*self.lorentzian(wavenumbers, cs, gammas, height_normalize) + (1 - etas)*self.gaussian(wavenumbers, cs, gammas, height_normalize)
-
+        vp = etas*self.lorentzian(wavenumbers, cs, gammas) + (1 - etas)*self.gaussian(wavenumbers, cs, gammas)
+        
+        if height_normalize:
+            vp  = vp / torch.max(vp)
         return vp
 
     def gaussian_noise(self, K, sigma):
@@ -280,7 +287,7 @@ class pseudoVoigtSimulatorTorch:
             gaussian_noise = torch.distributions.normal.Normal(0, sigma).sample((K,))
             return gaussian_noise
 
-    def generate_full_spectrum(self, peaks, gamma, eta, alpha, sigma = 0.5):
+    def generate_full_spectrum(self, peaks, gamma, eta, alpha, sigma = 0.5, height_normalize=False, wavenumber_normalize=False):
         """Generate full spectrum
 
         Args:
@@ -296,10 +303,41 @@ class pseudoVoigtSimulatorTorch:
         # sigma = torch.sum(alpha)*noise_to_signal_ratio
 
         alpha = torch.tile(alpha, (self.wavenumbers, 1)).T
-        Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta)
+        Vp = self.pseudo_voigt(self.wavenumbers, peaks, gamma, eta, height_normalize=height_normalize, wavenumber_normalize=wavenumber_normalize)
         voigt_with_alpha = Vp * alpha 
         full_spectrum = torch.sum(voigt_with_alpha, axis=0) + self.gaussian_noise(self.wavenumbers, sigma)
         return full_spectrum
+    
+
+    def decoder(self, peaks, gamma, eta, alpha, height_normalize=False, wavenumber_normalize=False, batch_size = 1):
+        W = self.wavenumbers            
+        if wavenumber_normalize:
+            ws = torch.linspace(0, 1, W)
+            gamma = gamma / W
+            # peaks = peaks / W
+        else: 
+            ws = torch.linspace(0, W, W)
+
+        K = 1 if not peaks.shape else peaks.shape[0] 
+
+        wavenumbers = torch.tile(ws, (K, batch_size)) 
+        cs = torch.tile(peaks, (W, batch_size)).T if peaks.shape == torch.Size([1]) else peaks.repeat(1, W)
+        # cs = peaks.repeat(1, W)
+        gammas = torch.tile(gamma, (W, batch_size)).T
+        etas = torch.tile(eta, (W, batch_size)).T
+        alphas = torch.tile(alpha, (W, batch_size)).T if alpha.shape == torch.Size([1]) else alpha.repeat(1, W)
+
+
+        ll = self.lorentzian(ws, cs, gammas)
+        gs = self.gaussian(ws, cs, gammas)
+        pv = etas*ll + (1 - etas)*gs
+        if height_normalize:
+            pv = pv/pv.max(1, keepdim=True)[0]
+        pv = alphas * pv
+        return pv
+
+        
+
 
     def generator(self, K, peaks = torch.tensor([250]), gamma = torch.tensor([20]), 
                   eta = torch.tensor([0.5]), alpha = torch.tensor([5]), sigma = 0.5):
@@ -325,24 +363,24 @@ class pseudoVoigtSimulatorTorch:
             # Randomize peaks
             if isinstance(peaks, tuple):
                 # pick random number between 1 and 10
-                c = torch.rand(K,) * peaks[1] + peaks[0]
+                c = torch.rand(K,) * (peaks[1]-peaks[0]) + peaks[0]
 
             if isinstance(gamma, tuple):
                 # pick random number between 1 and 10
-                g = torch.rand(K,) * gamma[1] + gamma[0]
+                g = torch.rand(K,) * (gamma[1]-gamma[0]) + gamma[0]
             
             if isinstance(eta, tuple):
                 # pick random number between 1 and 10
-                e = torch.rand(K,) * eta[1] + eta[0]
+                e = torch.rand(K,) * (eta[1]-eta[0]) + eta[0]
             
             # if alpha is tuple then randomize
             if isinstance(alpha, tuple):
                 # pick random number between 1 and 10
-                a = torch.rand(K,) * alpha[1] + alpha[0]
+                a = torch.rand(K,) * (alpha[1]-alpha[0]) + alpha[0]
         
             parameters = torch.stack((c, g, e, a))
 
-            yield self.generate_full_spectrum(c, g, e, a, sigma), parameters
+            yield self.generate_full_spectrum(c, g, e, a, sigma, height_normalize=True, wavenumber_normalize=True), parameters
 
 
     def generate_random_spectra(self, amount):
@@ -390,22 +428,51 @@ if __name__ == "__main__":
     # print(s_torch.shape)
 
 
+    s= ps.generate_full_spectrum(torch.tensor([-1000]), torch.tensor([20]), torch.tensor([0.5]), torch.tensor([1]), sigma=0.5)
+    print(s)
 
-    peaks = torch.tensor([250])
-    gamma = torch.tensor([20])
-    eta = torch.tensor([0.5])
-    alpha = torch.tensor([0.5])
 
-    for i, (s, y) in enumerate(ps.generator(1, peaks = (50,450),
-                    gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = (0.5,10), sigma = 0.5)):
-        print(y)
+    # W = 500
+    # ws = torch.arange(W)
+    # c, gamma, eta = torch.tensor([-1000]), torch.tensor([20]), torch.tensor([0.5])
 
-        break
-        plt.plot(s)
-        if i == 10:
-            break
+    # K = 1 if not c.shape else c.shape[0] 
 
-    plt.show()
+
+    # wavenumbers = torch.tile(ws, (K, 1))
+    # cs = torch.tile(c, (W, 1)).T
+    # gammas = torch.tile(gamma, (W, 1)).T
+    # etas = torch.tile(eta, (W, 1)).T
+
+
+    # l = ps.lorentzian(ws, cs, gammas)
+    # print(l)
+    # g = ps.gaussian(ws, cs, gammas)
+    # print(g)
+    # # w, c, gamma, height_nomralize=True
+
+
+    # Gs = 1/(np.sqrt(2*torch.pi)*gamma) * torch.exp((-(ws-cs)**2)/(2*gammas**2))
+    # # divide by the maximum value
+    # print(Gs)
+    # Gs = Gs / torch.max(Gs)
+
+    # print(Gs)
+    # peaks = torch.tensor([250])
+    # gamma = torch.tensor([20])
+    # eta = torch.tensor([0.5])
+    # alpha = torch.tensor([0.5])
+
+    # for i, (s, y) in enumerate(ps.generator(1, peaks = (50,450),
+    #                 gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = (0.5,10), sigma = 0.5)):
+    #     print(y)
+
+    #     break
+    #     plt.plot(s)
+    #     if i == 10:
+    #         break
+
+    # plt.show()
     
 
 
