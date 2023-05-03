@@ -67,6 +67,7 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, full_spec, n=3):
     plt.tight_layout()
     plt.show()
 
+
 def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons, recons_mu, mu, logvar, labels, label_name, tmp_img="plots_vae_temp2.png"):
     """ Plot the loss over time
     
@@ -88,7 +89,7 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
     fig, axs = plt.subplots(3, width, figsize=(15, 15))
 
     # Figure title above all subplots
-    fig.suptitle(f"Epoch {epoch} of {epochs}")
+    # fig.suptitle(f"Epoch {epoch} of {epochs}")
 
     # Plot loss
     axs[0, 0].plot(loss, label="Total loss")
@@ -211,9 +212,6 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
         
 
     plt.tight_layout()
-    plt.savefig(tmp_img)
-    plt.close(fig)
-    display(Image(filename=tmp_img))
-    clear_output(wait=True)
+    return plt, fig, tmp_img
 
-    os.remove(tmp_img)
+    
