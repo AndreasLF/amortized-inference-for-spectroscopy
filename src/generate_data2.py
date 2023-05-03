@@ -337,8 +337,6 @@ class pseudoVoigtSimulatorTorch:
         return pv
 
         
-
-
     def generator(self, K, peaks = torch.tensor([250]), gamma = torch.tensor([20]), 
                   eta = torch.tensor([0.5]), alpha = torch.tensor([5]), sigma = 0.5):
         """Generator for random spectra
@@ -381,6 +379,26 @@ class pseudoVoigtSimulatorTorch:
             parameters = torch.stack((c, g, e, a))
 
             yield self.generate_full_spectrum(c, g, e, a, sigma, height_normalize=True, wavenumber_normalize=True), parameters
+
+    def predefined_generator(self, gen_num):
+        """Generator for random spectra with parameters used in thesis
+        
+        Args:
+            gen_num (int): Number of spectra
+        
+
+        """
+        assert gen_num in [1,2,3], "gen_num must be 1, 2 or 3"
+
+        if gen_num == 1:
+            generator = self.generator(1, peaks = torch.tensor([250]), gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = (0.5,10), sigma = 0.5)
+        elif gen_num == 2:
+            generator = self.generator(1, peaks = (50, 450), gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = torch.tensor([5]), sigma = 0.5)
+        elif gen_num == 3:
+            generator = self.generator(1, peaks = (50, 450), gamma = torch.tensor([20]), eta = torch.tensor([0.5]), alpha = (0.5, 10), sigma = 0.5)
+
+        return generator
+
 
 
     def generate_random_spectra(self, amount):
