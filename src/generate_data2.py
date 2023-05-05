@@ -4,7 +4,6 @@ import torch
 # matplotlib style
 plt.style.use('seaborn')
 
-
 class pseudoVoigtSimulator:
     def __init__(self, wavenumbers):
         """Simulate a pseudo-Voigt spectrum
@@ -429,7 +428,6 @@ class pseudoVoigtSimulatorTorch:
             random_spectra[i] = ps
 
         return random_spectra
-
 
 if __name__ == "__main__":
 

@@ -7,8 +7,6 @@ src/utils/__pycache__
 notebooks/__pycache__
 wandb
 results/wandb
-# src/plotting/models/__pycache__
-# src/models/__pycache__
 # Pyc files
 *.pyc
 # all pycache folders 

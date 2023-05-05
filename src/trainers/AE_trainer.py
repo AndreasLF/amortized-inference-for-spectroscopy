@@ -9,7 +9,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
 
 
-def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = None, lr = 0.001, label = "alpha"):
+
+
+def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = None, lr = 0.001, label = "alpha", wandb_log = False):
     """ Train the autoencoder on the data for a number of epochs
     
     Args:
@@ -20,6 +22,8 @@ def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per
     Returns:
         nn.Module: The trained autoencoder
     """
+    if wandb_log:
+        import wandb
 
     # The optimizer is defined 
     if optimizer == 'adam':
@@ -50,6 +54,9 @@ def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per
                 break
         
         train_loss.append(np.mean(batch_loss))
+
+        if wandb_log:
+            wandb.log({"train_loss": train_loss[-1]})
 
         # Only plot this if we are running in a notebook
         if os.path.basename(sys.argv[0]) == 'ipykernel_launcher.py':

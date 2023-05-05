@@ -97,7 +97,9 @@ class VariationalAutoencoder(nn.Module):
         h1 = self.encoder1(x)
         h2 = self.encoder2(h1)
         mu = self.encoder_mu(h2)
-        log_sigma = self.encoder_logvar(h2)
+        log_var = self.encoder_logvar(h2)
+        sigma = torch.exp(0.5 * log_var)
+        log_sigma = torch.log(sigma)
         
         # return a distribution `q(x|x) = N(z | \mu(x), \sigma(x))`
         return ReparameterizedDiagonalGaussian(mu, log_sigma)
@@ -116,7 +118,7 @@ class VariationalAutoencoder(nn.Module):
         px_logits = px_logits.view(-1, *self.input_shape) # reshape the output
 
         # Gaussian observation model
-        return Normal(loc=px_logits, scale=0.25)
+        return Normal(loc=px_logits, scale=0.5)
 
         # return Bernoulli(logits=px_logits, validate_args=False)
 
