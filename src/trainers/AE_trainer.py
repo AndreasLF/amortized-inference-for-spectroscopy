@@ -2,7 +2,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os, sys
-from IPython.display import Image, display, clear_output
+
+if os.path.basename(sys.argv[0]) == 'ipykernel_launcher.py':
+    from IPython.display import Image, display, clear_output
+    
 from src.plotting.AE_plotting import plot_loss
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

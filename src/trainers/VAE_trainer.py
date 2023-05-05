@@ -1,10 +1,12 @@
 import torch; torch.manual_seed(0)
 import torch.utils
 import torch.distributions
+import torch.nn as nn
 import numpy as np
 from torch import Tensor
-from IPython.display import Image, display, clear_output
 import os, sys
+if os.path.basename(sys.argv[0]) == 'ipykernel_launcher.py':
+    from IPython.display import Image, display, clear_output
 
 from src.plotting.VAE_plotting import plot_loss
 
@@ -27,6 +29,8 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
         nn.Module: The trained autoencoder
     """
 
+    MSE_loss = nn.MSELoss()
+
     # The optimizer is defined 
     if optimizer == 'adam':
         opt = torch.optim.Adam(autoencoder.parameters(), lr=lr)
@@ -40,6 +44,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
     train_loss_kl = []
     train_loss_elbo = []
     train_loss_logpx = []
+    train_loss_MSE = []
 
     # Loop through epochs 
     for epoch in range(epochs):
@@ -47,6 +52,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
         batch_loss_kl = []
         batch_elbo = []
         batch_logpx = []
+        batch_MSE = []
       
         # Loop through batches of train data
         for i, (x, y) in enumerate(data):
@@ -78,6 +84,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
             batch_loss_kl.append(kl.mean().item())
             batch_elbo.append(elbo.mean().item())
             batch_logpx.append(log_px.mean().item())
+            batch_MSE.append(MSE_loss(x_hat, x).mean().item())
             
             if num_iterations_per_epoch and i == num_iterations_per_epoch:
                 break
@@ -86,6 +93,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
         train_loss_kl.append(np.mean(batch_loss_kl))
         train_loss_elbo.append(np.mean(batch_elbo))
         train_loss_logpx.append(np.mean(batch_logpx))
+        train_loss_MSE.append(np.mean(batch_MSE))
          
         # if it is a notebook, show the plots
         if os.path.basename(sys.argv[0]) == 'ipykernel_launcher.py':
@@ -115,5 +123,5 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
 
                 os.remove(tmp_img)
 
-    train_loss = {"loss": train_loss, "kl": train_loss_kl, "elbo": train_loss_elbo, "logpx": train_loss_logpx}
+    train_loss = {"loss": train_loss, "kl": train_loss_kl, "elbo": train_loss_elbo, "logpx": train_loss_logpx, "MSE": train_loss_MSE}
     return autoencoder, train_loss
