@@ -17,7 +17,7 @@ def reduce(x:Tensor) -> Tensor:
     """for each datapoint: sum over all dimensions"""
     return x.view(x.size(0), -1).sum(dim=1)
 
-def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = None, lr = 0.001, beta=1, label = "alpha"):
+def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per_epoch = None, lr = 0.001, beta=1, label = "alpha", wandb_log=False):
     """ Train the autoencoder on the data for a number of epochs
     
     Args:
@@ -28,6 +28,8 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
     Returns:
         nn.Module: The trained autoencoder
     """
+    if wandb_log:
+        import wandb
 
     MSE_loss = nn.MSELoss()
 
@@ -94,6 +96,9 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
         train_loss_elbo.append(np.mean(batch_elbo))
         train_loss_logpx.append(np.mean(batch_logpx))
         train_loss_MSE.append(np.mean(batch_MSE))
+
+        if wandb_log:
+            wandb.log({"loss": train_loss[-1], "kl": train_loss_kl[-1], "elbo": train_loss_elbo[-1], "logpx": train_loss_logpx[-1], "MSE": train_loss_MSE[-1]})
          
         # if it is a notebook, show the plots
         if os.path.basename(sys.argv[0]) == 'ipykernel_launcher.py':
