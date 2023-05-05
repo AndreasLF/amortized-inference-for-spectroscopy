@@ -48,7 +48,8 @@ for generator_num, labels in generators.items():
                     "latent_space_dims": latent_dims,
                     "optimizer": optimizer,
                     "learning_rate": learning_rate,
-                    "num_batches_per_epoch": num_batches_per_epoch
+                    "num_batches_per_epoch": num_batches_per_epoch,
+                    "beta": beta
                     }
                 )
 
