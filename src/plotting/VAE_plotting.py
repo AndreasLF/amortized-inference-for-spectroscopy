@@ -1,9 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib
-from src.models.reparameterized_gaussian import ReparameterizedDiagonalGaussian
-import os, sys
-from IPython.display import Image, display, clear_output
+from src.generate_data2 import pseudoVoigtSimulatorTorch
 
 def plt_latent_space_ellipses(z, mu, sigma, y, label_name):
     lab = y
@@ -14,8 +12,8 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name):
     sc.set_visible(False)
     plt.title('Latent space, $2\\sigma$ from $\\mu$')
     # axis labels
-    plt.xlabel('$z_0$')
-    plt.ylabel('$z_1$')  
+    plt.xlabel('$z_1$')
+    plt.ylabel('$z_2$')  
     # Give colorbar a rotated text 
     # cbar.set_label(text_cbar, rotation=270-180)
     # cbar.ax.yaxis.set_label_coords(-1, 0.5)
@@ -43,26 +41,33 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name):
         plt.gca().add_patch(ellipse)
     
 
-def plt_reconstructions(x, x_hat, x_hat_mu, y, full_spec, n=3):
+def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
     # get default colors    
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
     print()
 
+    ps = pseudoVoigtSimulatorTorch(500)
+
     fig, axs = plt.subplots(n, n, figsize=(15,15))
     for i in range(n*n):
-        axs[i//n, i%n].plot(x[i].flatten(), label="Spectrum", alpha=0.5, color=colors[0])
-        if  y.shape[1] == 1:
-            axs[i//n, i%n].plot(full_spec(y[i]).flatten(), label="Pure voigt", color=colors[0])
-        else:
-            axs[i//n, i%n].plot(full_spec(y[:,0][i],y[:,3][i]).flatten(), label="Pure voigt", color=colors[0])
-        axs[i//n, i%n].plot(x_hat_mu[i].flatten(), label="Reconstruction ($\\mu$)", alpha=0.7, color=colors[2])
-        axs[i//n, i%n].plot(x_hat[i].flatten(), label="Reconstruction ($z$)", alpha=0.8, color=colors[1], linestyle="--")
-        axs[i//n, i%n].set_title("Reconstruction of SERS spectra")
-        axs[i//n, i%n].set_xlabel("Wavenumber")
-        axs[i//n, i%n].set_ylabel("Intensity (a.u.)")
-        axs[i//n, i%n].legend()
-        axs[i//n, i%n].legend(frameon=True)
+        ax = axs[i//n, i%n]
+        ax.plot(x[i].flatten(), label="Spectrum", alpha=0.5, color=colors[0])
+
+        c_ = y[:,0][i]
+        eta_ = y[:,2][i]
+        gamma_ = y[:,1][i]
+        alpha_ = y[:,3][i]
+        vp = alpha_  * ps.pseudo_voigt(500, c_, gamma_, eta_, height_normalize=True, wavenumber_normalize=True)
+
+        ax.plot(vp.flatten(), label='pure voigt', color = colors[0])
+
+        ax.plot(x_hat_mu[i].flatten(), label="Reconstruction ($\\mu$)", alpha=1, color=colors[2])
+        # axs[i//n, i%n].plot(x_hat[i].flatten(), label="Reconstruction ($z$)", alpha=0.8, color=colors[1], linestyle="--")
+        ax.set_title("Reconstruction of SERS spectra")
+        ax.set_xlabel("Wavenumber")
+        ax.set_ylabel("Intensity (a.u.)")
+        ax.legend(frameon=True)
 
     plt.tight_layout()
     plt.show()
