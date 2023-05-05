@@ -6,14 +6,14 @@ curr_script_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(curr_script_dir)
 sys.path.append(parent_dir)
 
-from src.models.vanilla_VAE import VariationalAutoencoder
+from src.models.VAE_pseudo_voigt import VAE, VAE_TwoParams, VAE_TwoParamsSigmoid
 from src.generate_data2 import pseudoVoigtSimulatorTorch
 from src.SERS_dataset import IterDataset
 from src.trainers.VAE_trainer import VAE_trainer
 
 parent_dir = os.path.dirname(curr_script_dir)
 results_dir = os.path.join(parent_dir, 'results')
-VAE_results_dir = os.path.join(results_dir, '2_VAE')
+VAE_results_dir = os.path.join(results_dir, '3_VAE_voigt_decoder')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
@@ -24,9 +24,8 @@ epochs = 100
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]
-generators = {1: "alpha", 2: "c", 3: ["c", "alpha"]}
+generators = {1: "alpha", 2: "c"}
 betas = [0.1, 0.5, 1, 2, 5]
-
 
 for generator_num, labels in generators.items():
     for learning_rate in learning_rates:
@@ -42,7 +41,7 @@ for generator_num, labels in generators.items():
                     
                     # track hyperparameters and run metadata
                     config={
-                    "architecture": "VariationalAutoencoder",
+                    "architecture": "VariationalAutoencoderVoigtDecoder",
                     "dataset": "generator_" + str(generator_num),
                     "batch_size": batch_size,
                     "epochs": epochs,
@@ -54,7 +53,7 @@ for generator_num, labels in generators.items():
                 )
 
                 # Add a tag to identify the run
-                run.tags = ["VAE"]
+                run.tags = ["VAE_Voigt"]
 
                 #==============================================================================
                 # Load the data
@@ -67,7 +66,7 @@ for generator_num, labels in generators.items():
                 #==============================================================================
                 # Define the model
                 #==============================================================================
-                autoencoder = VariationalAutoencoder(next(iter(train_loader))[0][1].shape, latent_dims, batch_size, labels).to(device) 
+                autoencoder = VAE(next(iter(train_loader))[0][1].shape, latent_dims, batch_size, labels).to(device) 
 
                 #==============================================================================
                 # Train the model

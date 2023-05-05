@@ -11,6 +11,7 @@ from src.utils.AE_plotting import plot_loss, plot_reconstructions, plot_latent_s
 
 parent_dir = os.path.dirname(curr_script_dir)
 results_dir = os.path.join(parent_dir, 'results')
+report_dir = os.path.join(parent_dir, 'reports')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
@@ -37,7 +38,6 @@ for batch_size in batch_sizes:
             config={
             "architecture": "VanillaVAE",
             "dataset": "IterDataset",
-            "tags": ["AutoencoderLinear"],
             "num_peaks": 1,
             "num_hotspots": 1,
             "batch_size": batch_size,
@@ -48,6 +48,8 @@ for batch_size in batch_sizes:
             "num_batches_per_epoch": num_batches_per_epoch
             }
         )
+
+        run.tags.append("AutoencoderLinear")
 
         #==============================================================================
         # Load the data

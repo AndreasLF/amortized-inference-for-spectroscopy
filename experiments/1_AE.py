@@ -24,7 +24,7 @@ epochs = 100
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.01, 0.001]
-generators = {1: "alpha", 2: "c", 3: ["alpha", "c"]}
+generators = {1: "alpha", 2: "c", 3: ["c", "alpha"]}
 
 
 for generator_num, labels in generators.items():
