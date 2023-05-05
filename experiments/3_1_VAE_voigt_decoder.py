@@ -19,7 +19,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 cuda = torch.cuda.is_available()
 
 batch_size = 100
-latent_dims_list = [2]
+latent_dims_list = [1]
 epochs = 100
 num_batches_per_epoch = 10
 optimizer = "adam"

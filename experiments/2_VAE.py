@@ -20,7 +20,7 @@ cuda = torch.cuda.is_available()
 
 batch_size = 100
 latent_dims_list = [2]
-epochs = 100
+epochs = 500
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]

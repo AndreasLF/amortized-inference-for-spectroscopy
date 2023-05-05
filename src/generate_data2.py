@@ -4,6 +4,9 @@ import torch
 # matplotlib style
 plt.style.use('seaborn')
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
 class pseudoVoigtSimulator:
     def __init__(self, wavenumbers):
         """Simulate a pseudo-Voigt spectrum
@@ -311,7 +314,7 @@ class pseudoVoigtSimulatorTorch:
     def decoder(self, peaks, gamma, eta, alpha, height_normalize=False, wavenumber_normalize=False, batch_size = 1):
         W = self.wavenumbers            
         if wavenumber_normalize:
-            ws = torch.linspace(0, 1, W)
+            ws = torch.linspace(0, 1, W, device=device)
             gamma = gamma / W
             # peaks = peaks / W
         else: 
@@ -319,19 +322,20 @@ class pseudoVoigtSimulatorTorch:
 
         K = 1 if not peaks.shape else peaks.shape[0] 
 
-        wavenumbers = torch.tile(ws, (K, batch_size)) 
+        wavenumbers = torch.tile(ws, (K, batch_size))
         cs = torch.tile(peaks, (W, batch_size)).T if peaks.shape == torch.Size([1]) else peaks.repeat(1, W)
         # cs = peaks.repeat(1, W)
         gammas = torch.tile(gamma, (W, batch_size)).T
         etas = torch.tile(eta, (W, batch_size)).T
         alphas = torch.tile(alpha, (W, batch_size)).T if alpha.shape == torch.Size([1]) else alpha.repeat(1, W)
-
-
+        # print(wavenumbers.device, gammas.device, etas.device, alphas.device)
         ll = self.lorentzian(ws, cs, gammas)
         gs = self.gaussian(ws, cs, gammas)
+
         pv = etas*ll + (1 - etas)*gs
         if height_normalize:
             pv = pv/pv.max(1, keepdim=True)[0]
+
         pv = alphas * pv
         return pv
 

@@ -100,7 +100,6 @@ class VAE(nn.Module):
         z = self.qz.rsample()
         
         # define the observation model p(x|z) = N(x | 0.25)
-        print(z)
         self.px = self.observation_model(z)
 
         self.kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
@@ -116,10 +115,10 @@ class VAE(nn.Module):
         ps = pseudoVoigtSimulatorTorch(500)
 
         # peaks = torch.tensor([250])
-        peaks = z if self.decoder_type == "c" else torch.tensor([250/500])
-        gamma = torch.tensor([20]) 
-        eta = torch.tensor([0.5])
-        alpha = z if self.decoder_type == "alpha" else torch.tensor([5])
+        peaks = z if self.decoder_type == "c" else torch.tensor([250/500], device=device)
+        gamma = torch.tensor([20], device=device) 
+        eta = torch.tensor([0.5], device=device)
+        alpha = z if self.decoder_type == "alpha" else torch.tensor([5], device=device)
         pv = ps.decoder(peaks, gamma, eta, alpha, wavenumber_normalize=True, height_normalize=True, batch_size=self.batch_size)
         return pv
 
@@ -138,8 +137,8 @@ class VAE_TwoParams(VAE):
 
         # peaks = torch.tensor([250])
         peaks = z[:,0].reshape(-1,1)
-        gamma = torch.tensor([20]) 
-        eta = torch.tensor([0.5])
+        gamma = torch.tensor([20], device=device) 
+        eta = torch.tensor([0.5], device=device)
         alpha = z[:,1].reshape(-1,1)
         pv = ps.decoder(peaks, gamma, eta, alpha, wavenumber_normalize=True, height_normalize=True, batch_size=self.batch_size)
         return pv
@@ -275,7 +274,6 @@ class VAE_TwoParamsSigmoidConv(VAE_TwoParamsSigmoid):
 
         mu, logvar = self._encode(x)
 
-        # print(logvar.shape)
 
         # torch rsample
         std = torch.exp(0.5*logvar)
