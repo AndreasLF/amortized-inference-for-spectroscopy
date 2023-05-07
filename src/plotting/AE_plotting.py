@@ -56,6 +56,8 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, tmp_img="ae_tmp2.
     # rcparams colors
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+    # get y-lim 
+    y_min, y_max = x[:width*2].min(), x[:width*2].max()
 
     for i in range(width*2):
         c_ = y[:,0][i]
@@ -69,6 +71,7 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, tmp_img="ae_tmp2.
         ax.plot(x[i], label='x', alpha=0.5, color = colors[0])
         ax.plot(vp.flatten(), label='pure voigt', color = colors[0])
         ax.plot(recons[i], label='$\\hat{x}$', color = colors[2])
+        ax.set_ylim(y_min, y_max)
         ax.set_title('Reconstruction')
         ax.set_xlabel('Wavenumber')
         ax.set_ylabel('Intensity')
