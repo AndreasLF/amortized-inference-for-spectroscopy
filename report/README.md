@@ -1,1 +1,1 @@
-This folder contains all the figures generated in the report
+This folder contains all things generated for the report such as 
