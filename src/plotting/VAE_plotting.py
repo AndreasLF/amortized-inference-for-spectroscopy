@@ -3,42 +3,57 @@ import numpy as np
 import matplotlib
 from src.generate_data2 import pseudoVoigtSimulatorTorch
 
-def plt_latent_space_ellipses(z, mu, sigma, y, label_name):
+def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):    
     lab = y
 
-    sc = plt.scatter(z[:, 0], z[:, 1], c=lab, cmap='viridis')
-    cbar = plt.colorbar(label=label_name, orientation="vertical")
-    # Hide sc
-    sc.set_visible(False)
-    plt.title('Latent space, $2\\sigma$ from $\\mu$')
-    # axis labels
-    plt.xlabel('$z_1$')
-    plt.ylabel('$z_2$')  
-    # Give colorbar a rotated text 
-    # cbar.set_label(text_cbar, rotation=270-180)
-    # cbar.ax.yaxis.set_label_coords(-1, 0.5)
+    fig, axs = plt.subplots(1, len(label_name), figsize=(15, 7))
 
-    mu_sorted = mu[lab.flatten().argsort()]
-    sigma_sorted = sigma[lab.flatten().argsort()]
-    # lab = lab[lab.argsort()]
-    # make colors for the scatter plot
-    colors = plt.cm.viridis(np.linspace(0, 1, len(lab)))
+    # if label_name is a list 
+    for n, lab_name in enumerate(label_name):
+        if len(label_name) == 1:
+            ax = axs
+        else:
+            ax = axs[n]
+        # make two plots next to each other
 
-    # plot ellipses 
-    for i in range(len(mu)):
-        # get mean and std of the latent space
-        mean = mu_sorted[i]
-        std = sigma_sorted[i]
-        # get the angle of the ellipse
-        angle = np.arctan(std[1]/std[0])
-        # get the width and height of the ellipse
-        width_ellipse = 2*std[0]
-        height_elipse = 2*std[1]
-        # create the ellipse
+        sc = ax.scatter(z[:, 0], z[:, 1], c=lab[n], cmap='viridis')
+        ll = f'$\\{lab_name}$' if lab_name != 'c' else lab_name
+        cbar = fig.colorbar(sc, ax=ax, label=ll)
 
-        ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
-        # add the ellipse to the plot
-        plt.gca().add_patch(ellipse)
+        # Set the font size of the colorbar label
+        cbar.ax.tick_params(labelsize=10)        # Hide sc
+        sc.set_visible(False)
+        ax.set_title(f'Latent space, ${sigma_factor}\\sigma$ from $\\mu$')
+        # axis labels
+        ax.set_xlabel('$z_1$')
+        ax.set_ylabel('$z_2$')  
+        # Give colorbar a rotated text 
+        # cbar.set_label(text_cbar, rotation=270-180)
+        # cbar.ax.yaxis.set_label_coords(-1, 0.5)
+
+        mu_sorted = mu[lab[n].flatten().argsort()]
+        sigma_sorted = sigma[lab[n].flatten().argsort()]
+        # lab = lab[lab.argsort()]
+        # make colors for the scatter plot
+        colors = plt.cm.viridis(np.linspace(0, 1, len(mu)))
+
+        # plot ellipses 
+        for i in range(len(mu)):
+            # get mean and std of the latent space
+            mean = mu_sorted[i]
+            std = sigma_sorted[i]
+            # get the angle of the ellipse
+            angle = np.arctan(std[1]/std[0])
+            # get the width and height of the ellipse
+            width_ellipse = sigma_factor*std[0]
+            height_elipse = sigma_factor*std[1]
+            # create the ellipse
+
+            ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
+            # add the ellipse to the plot
+            ax.add_patch(ellipse)
+
+    return plt
     
 
 def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
@@ -49,9 +64,15 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
 
     ps = pseudoVoigtSimulatorTorch(500)
 
-    fig, axs = plt.subplots(n, n, figsize=(15,15))
-    for i in range(n*n):
-        ax = axs[i//n, i%n]
+    h = 2
+    w = 3
+
+
+    fig, axs = plt.subplots(h, w, figsize=(15,10))
+
+    y_min, y_max = x[:h*w].min(), x[:h*w].max()
+    for i in range(h*w):
+        ax = axs[i//w, i%w]
         ax.plot(x[i].flatten(), label="Spectrum", alpha=0.5, color=colors[0])
 
         c_ = y[:,0][i]
@@ -60,17 +81,22 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
         alpha_ = y[:,3][i]
         vp = alpha_  * ps.pseudo_voigt(500, c_, gamma_, eta_, height_normalize=True, wavenumber_normalize=True)
 
-        ax.plot(vp.flatten(), label='pure voigt', color = colors[0])
+        ax.plot(vp.flatten(), label='Pure voigt', color = colors[0])
 
         ax.plot(x_hat_mu[i].flatten(), label="Reconstruction ($\\mu$)", alpha=1, color=colors[2])
         # axs[i//n, i%n].plot(x_hat[i].flatten(), label="Reconstruction ($z$)", alpha=0.8, color=colors[1], linestyle="--")
-        ax.set_title("Reconstruction of SERS spectra")
+        # ax.set_title("Reconstruction of SERS spectra")
         ax.set_xlabel("Wavenumber")
         ax.set_ylabel("Intensity (a.u.)")
         ax.legend(frameon=True)
-
+        ax.set_ylim(y_min, y_max)
+    # margin between suptitle and figure
+    plt.subplots_adjust(top=2)
+    plt.suptitle("Reconstructions of Raman spectra")
+    
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    return plt
 
 
 def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons, recons_mu, mu, logvar, labels, label_name, tmp_img="plots_vae_temp2.png"):
@@ -154,55 +180,55 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
         # axs[0,3].set_title("Latent space")
 
 
-    lab = labels[0].to('cpu').detach().numpy()
+    # lab = labels[0].to('cpu').detach().numpy()
     
 
-    sc = axs[2,0].scatter(z[:, 0], z[:, 1], c=lab, cmap='viridis')
-    cbar = fig.colorbar(sc, ax=axs[2,0])
-    # Hide sc
-    sc.set_visible(False)
-    axs[2,0].set_title('Latent space, $2\\sigma$ from $\\mu$')
-    # axis labels
-    axs[2,0].set_xlabel('$z_0$')
-    axs[2,0].set_ylabel('$z_1$')  
-    # Give colorbar a rotated text 
-    text_cbar = f'$\\{label_name[0]}$' if label_name[0] != 'c' else label_name[0]
-    cbar.set_label(text_cbar, rotation=270-180)
-    cbar.ax.yaxis.set_label_coords(-1, 0.5)
+    # sc = axs[2,0].scatter(z[:, 0], z[:, 1], c=lab, cmap='viridis')
+    # cbar = fig.colorbar(sc, ax=axs[2,0])
+    # # Hide sc
+    # sc.set_visible(False)
+    # axs[2,0].set_title('Latent space, $2\\sigma$ from $\\mu$')
+    # # axis labels
+    # axs[2,0].set_xlabel('$z_0$')
+    # axs[2,0].set_ylabel('$z_1$')  
+    # # Give colorbar a rotated text 
+    # text_cbar = f'$\\{label_name[0]}$' if label_name[0] != 'c' else label_name[0]
+    # cbar.set_label(text_cbar, rotation=270-180)
+    # cbar.ax.yaxis.set_label_coords(-1, 0.5)
 
-    mu_sorted = mu[lab.flatten().argsort()]
-    sigma_sorted = sigma[lab.flatten().argsort()]
-    # lab = lab[lab.argsort()]
-    # make colors for the scatter plot
-    colors = plt.cm.viridis(np.linspace(0, 1, len(lab)))
+    # mu_sorted = mu[lab.flatten().argsort()]
+    # sigma_sorted = sigma[lab.flatten().argsort()]
+    # # lab = lab[lab.argsort()]
+    # # make colors for the scatter plot
+    # colors = plt.cm.viridis(np.linspace(0, 1, len(lab)))
 
-    # plot ellipses 
-    for i in range(len(mu)):
-        # get mean and std of the latent space
-        mean = mu_sorted[i]
-        std = sigma_sorted[i]
-        # get the angle of the ellipse
-        angle = np.arctan(std[1]/std[0])
-        # get the width and height of the ellipse
-        width_ellipse = 2*std[0]
-        height_elipse = 2*std[1]
-        # create the ellipse
+    # # plot ellipses 
+    # for i in range(len(mu)):
+    #     # get mean and std of the latent space
+    #     mean = mu_sorted[i]
+    #     std = sigma_sorted[i]
+    #     # get the angle of the ellipse
+    #     angle = np.arctan(std[1]/std[0])
+    #     # get the width and height of the ellipse
+    #     width_ellipse = 2*std[0]
+    #     height_elipse = 2*std[1]
+    #     # create the ellipse
 
-        ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
-        # add the ellipse to the plot
-        axs[2,0].add_patch(ellipse)
+    #     ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
+    #     # add the ellipse to the plot
+    #     axs[2,0].add_patch(ellipse)
 
 
 
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(mu[0])))
-    for j in range(width):
-        axs[1, j].plot(x[j].flatten(), label="Original")
-        axs[1, j].plot(recons[j].flatten(), label="Reconstruction")
-        axs[1, j].plot(recons_mu[j].flatten(), label="Reconstruction mu")
-        axs[1, j].set_title("Reconstruction of SERS spectra")
-        axs[1, j].set_xlabel("Wavenumber")
-        axs[1, j].set_ylabel("Intensity (a.u.)")
-        axs[1, j].legend()
+    # colors = plt.cm.rainbow(np.linspace(0, 1, len(mu[0])))
+    # for j in range(width):
+    #     axs[1, j].plot(x[j].flatten(), label="Original")
+    #     axs[1, j].plot(recons[j].flatten(), label="Reconstruction")
+    #     axs[1, j].plot(recons_mu[j].flatten(), label="Reconstruction mu")
+    #     axs[1, j].set_title("Reconstruction of SERS spectra")
+    #     axs[1, j].set_xlabel("Wavenumber")
+    #     axs[1, j].set_ylabel("Intensity (a.u.)")
+    #     axs[1, j].legend()
 
         # for i in range(len(mu[0]-1)):
         #     axs[2, j].axvline(mu[j][i], linestyle='--', alpha=0.5, color=colors[i])
@@ -220,3 +246,16 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
     return plt, fig, tmp_img
 
     
+def plot_losses(train_loss, generator_num):
+    # plot 5 loses 
+    fig, axs = plt.subplots(1, 5, figsize=(15, 3.5))
+    for i, key in enumerate(train_loss.keys()):
+        axs[i].plot(train_loss[key])
+        axs[i].set_title(key)
+        axs[i].set_xlabel('Epoch')
+        axs[i].set_ylabel('Loss')
+
+    plt.suptitle(f"Losses for VAE (generator {generator_num})")
+    plt.tight_layout()
+
+    return plt
