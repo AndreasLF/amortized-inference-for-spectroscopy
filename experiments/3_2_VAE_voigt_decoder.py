@@ -58,9 +58,9 @@ for sigmoid in sigmoid_:
 
                     # Add a tag to identify the run
                     if sigmoid:
-                        run.tags = ["VAE_Voigt_Sigmoid"]
+                        run.tags = ["VAE_Voigt_Sigmoid", "logmu"]
                     else:
-                        run.tags = ["VAE_Voigt"]
+                        run.tags = ["VAE_Voigt", "logmu"]
 
                     #==============================================================================
                     # Load the data

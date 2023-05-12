@@ -54,7 +54,7 @@ for generator_num, labels in generators.items():
                 )
 
                 # Add a tag to identify the run
-                run.tags = ["VAE_Voigt"]
+                run.tags = ["VAE_Voigt", "logmu"]
 
                 #==============================================================================
                 # Load the data

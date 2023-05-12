@@ -59,7 +59,7 @@ for generator_num, labels in generators.items():
                             }
                         )
 
-                        run.tags = ["VAE_Voigt_Sigmoid_CNN"]
+                        run.tags = ["VAE_Voigt_Sigmoid_CNN", "logmu"]
 
 
                         #==============================================================================
