@@ -76,7 +76,7 @@ class VariationalAutoencoder(nn.Module):
 
         self.encoder1 = nn.Linear(in_features=500, out_features=128).to(device)
         self.encoder2 = nn.ReLU().to(device)
-        self.encoder_mu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+        self.encoder_logmu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
         self.encoder_logvar = nn.Linear(in_features=128, out_features=latent_dims).to(device)
 
         self.decoder1 = nn.Linear(in_features=latent_dims, out_features=128).to(device)
@@ -90,14 +90,19 @@ class VariationalAutoencoder(nn.Module):
         # define the parameters of the prior, chosen as p(z) = N(0, I)
         self.register_buffer('prior_params', torch.zeros(torch.Size([1, 2*latent_dims])))
         
+    def _encode(self, x):
+        h1 = self.encoder1(x)
+        h2 = self.encoder2(h1)
+        log_mu = self.encoder_logmu(h2)
+        mu = torch.exp(log_mu)
+        log_var = self.encoder_logvar(h2)
+        return mu, log_var
+
     def posterior(self, x:Tensor) -> Distribution:
         """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
         
         # compute the parameters of the posterior
-        h1 = self.encoder1(x)
-        h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
-        log_var = self.encoder_logvar(h2)
+        mu, log_var = self._encode(x)
         sigma = torch.exp(0.5 * log_var)
         log_sigma = torch.log(sigma)
         
@@ -123,12 +128,9 @@ class VariationalAutoencoder(nn.Module):
         # return Bernoulli(logits=px_logits, validate_args=False)
 
     def encode(self, x):
-        h1 = self.encoder1(x)
-        h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
-        logvar = self.encoder_logvar(h2)
+        mu, log_var = self._encode(x)
         # torch rsample
-        std = torch.exp(0.5*logvar)
+        std = torch.exp(0.5*log_var)
         eps = torch.randn_like(std)
         z = mu + eps*std
         
@@ -146,9 +148,9 @@ class VariationalAutoencoder(nn.Module):
         # define the observation model p(x|z) = N(x | 0.25)
         self.px = self.observation_model(z)
 
-        self.kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
+        self.kl = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1).mean()
 
-        return z, mu, logvar     
+        return z, mu, log_var     
     
 
     def decode(self, z):

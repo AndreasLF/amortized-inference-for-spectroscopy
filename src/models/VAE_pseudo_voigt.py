@@ -32,7 +32,7 @@ class VAE(nn.Module):
 
         self.encoder1 = nn.Linear(in_features=500, out_features=128).to(device)
         self.encoder2 = nn.ReLU().to(device)
-        self.encoder_mu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+        self.encoder_logmu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
         self.encoder_logvar = nn.Linear(in_features=128, out_features=latent_dims).to(device)
 
         # Pseudo-voigt decoder is used instead of a neural network. See decode function
@@ -47,17 +47,24 @@ class VAE(nn.Module):
         # define the parameters of the prior, chosen as p(z) = N(0, I)
         self.register_buffer('prior_params', torch.zeros(torch.Size([1, 2*latent_dims])))
         
-    def posterior(self, x:Tensor) -> Distribution:
-        """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
-        
-        # compute the parameters of the posterior
+
+    def _enocode(self, x):
         h1 = self.encoder1(x)
         h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
+        log_mu = self.encoder_logmu(h2)
+        mu = torch.exp(log_mu)
         log_var = self.encoder_logvar(h2)
+
+
+    def posterior(self, x:Tensor) -> Distribution:
+        """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
+        # compute the parameters of the posterior
+        mu, log_var = self._enocode(x)
+        sigma = torch.exp(0.5 * log_var)
+        log_sigma = torch.log(sigma)
         
         # return a distribution `q(x|x) = N(z | \mu(x), \sigma(x))`
-        return ReparameterizedDiagonalGaussian(mu, log_var)
+        return ReparameterizedDiagonalGaussian(mu, log_sigma)
     
     def prior(self, batch_size:int=1)-> Distribution:
         """return the distribution `p(z)`"""
@@ -78,15 +85,11 @@ class VAE(nn.Module):
         # return Bernoulli(logits=px_logits, validate_args=False)
 
     def encode(self, x):
-        h1 = self.encoder1(x)
-        h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
-        logvar = self.encoder_logvar(h2)
+        mu, logvar = self._enocode(x)
         # torch rsample
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
         z = mu + eps*std
-
         
         x = x.view(x.size(0), -1)
         
@@ -153,14 +156,13 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
         """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
         
         # compute the parameters of the posterior
-        h1 = self.encoder1(x)
-        h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
+        mu, log_var = self._encode(x)
 
-        # sigmoid transform first column
+        # sigmoid transform first column, peak position
         mu[:,0] = torch.sigmoid(mu[:,0])
 
-        log_sigma = self.encoder_logvar(h2)
+        sigma = torch.exp(0.5 * log_var)
+        log_sigma = torch.log(sigma)
         
         # return a distribution `q(x|x) = N(z | \mu(x), \sigma(x))`
         return ReparameterizedDiagonalGaussian(mu, log_sigma)
@@ -184,12 +186,9 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
         # return Bernoulli(logits=px_logits, validate_args=False)
 
     def encode(self, x):
-        h1 = self.encoder1(x)
-        h2 = self.encoder2(h1)
-        mu = self.encoder_mu(h2)
+        mu, logvar = self._enocode(x)
         # sigmoid transform first column
         mu[:,0] = torch.sigmoid(mu[:,0])
-        logvar = self.encoder_logvar(h2)
         # torch rsample
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
@@ -253,19 +252,23 @@ class VAE_TwoParamsSigmoidConv(VAE_TwoParamsSigmoid):
         h = x.unsqueeze(1)  # Add a channel dimension for 1D convolution
         h2 = self.encoder1(h)
 
-        mu = self.encoder_mu(h2)
+        log_mu = self.encoder_logmu(h2)
+        mu = torch.exp(log_mu)
+
         mu[:,0] = torch.sigmoid(mu[:,0])
 
-        log_sigma = self.encoder_logvar(h2)
+        log_var = self.encoder_logvar(h2)
 
-        return mu, log_sigma
+        return mu, log_var
 
 
     def posterior(self, x:Tensor) -> Distribution:
         """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
 
 
-        mu, log_sigma = self._encode(x)
+        mu, log_var = self._encode(x)
+        sigma = torch.exp(0.5 * log_var)
+        log_sigma = torch.log(sigma)
         
         # return a distribution `q(x|x) = N(z | \mu(x), \sigma(x))`
         return ReparameterizedDiagonalGaussian(mu, log_sigma)
