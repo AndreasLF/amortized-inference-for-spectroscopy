@@ -48,18 +48,19 @@ class VAE(nn.Module):
         self.register_buffer('prior_params', torch.zeros(torch.Size([1, 2*latent_dims])))
         
 
-    def _enocode(self, x):
+    def _encode(self, x):
         h1 = self.encoder1(x)
         h2 = self.encoder2(h1)
         log_mu = self.encoder_logmu(h2)
         mu = torch.exp(log_mu)
         log_var = self.encoder_logvar(h2)
 
+        return mu, log_var
 
     def posterior(self, x:Tensor) -> Distribution:
         """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
         # compute the parameters of the posterior
-        mu, log_var = self._enocode(x)
+        mu, log_var = self._encode(x)
         sigma = torch.exp(0.5 * log_var)
         log_sigma = torch.log(sigma)
         
@@ -85,7 +86,7 @@ class VAE(nn.Module):
         # return Bernoulli(logits=px_logits, validate_args=False)
 
     def encode(self, x):
-        mu, logvar = self._enocode(x)
+        mu, logvar = self._encode(x)
         # torch rsample
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
@@ -107,7 +108,6 @@ class VAE(nn.Module):
 
         self.kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
-        
         # return {'px': px, 'pz': pz, 'qz': qz, 'z': z}
 
         return z, mu, logvar     
