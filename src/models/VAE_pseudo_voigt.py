@@ -186,7 +186,7 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
         # return Bernoulli(logits=px_logits, validate_args=False)
 
     def encode(self, x):
-        mu, logvar = self._enocode(x)
+        mu, logvar = self._encode(x)
         # sigmoid transform first column
         mu[:,0] = torch.sigmoid(mu[:,0])
         # torch rsample
