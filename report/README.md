@@ -1,1 +1,0 @@
-This folder contains all things generated for the report such as 
