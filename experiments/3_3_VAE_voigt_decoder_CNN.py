@@ -20,14 +20,14 @@ cuda = torch.cuda.is_available()
 
 batch_size = 100
 latent_dims_list = [2]
-epochs = 500
+epochs = 10000
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]
 generators = {3: ["c", "alpha"]}
-betas = [0.1, 0.5, 1, 2, 5]
-out_channels = [1, 2, 4, 8, 16]
-kernel_sizes = [10, 15, 20, 25, 50, 80, 100]
+betas = [1, 2, 5]
+out_channels = [8]
+kernel_sizes = [10, 15, 20]
 
 for generator_num, labels in generators.items():
     for learning_rate in learning_rates:
@@ -48,7 +48,7 @@ for generator_num, labels in generators.items():
                             "architecture": "VariationalAutoencoderVoigtDecoder",
                             "dataset": "generator_" + str(generator_num),
                             "batch_size": batch_size,
-                            "epochs": epochs,
+                            "epochs": "until convergence",
                             "latent_space_dims": latent_dims,
                             "optimizer": optimizer,
                             "learning_rate": learning_rate,
@@ -59,7 +59,7 @@ for generator_num, labels in generators.items():
                             }
                         )
 
-                        run.tags = ["VAE_Voigt_Sigmoid_CNN", "logmu"]
+                        run.tags = ["VAE_Voigt_Sigmoid_CNN", "logmu", "until convergence"]
 
 
                         #==============================================================================

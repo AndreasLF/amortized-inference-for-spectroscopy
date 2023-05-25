@@ -20,12 +20,12 @@ cuda = torch.cuda.is_available()
 
 batch_size = 100
 latent_dims_list = [2]
-epochs = 100
+epochs = 10000
 num_batches_per_epoch = 10
 optimizer = "adam"
-learning_rates = [0.01, 0.001]
+learning_rates = [0.01]
 generators = {1: "alpha", 2: "c", 3: ["c", "alpha"]}
-
+# generators = {3: ["c", "alpha"]}
 
 for generator_num, labels in generators.items():
     for learning_rate in learning_rates:
@@ -43,7 +43,7 @@ for generator_num, labels in generators.items():
                 "architecture": "Autoencoder",
                 "dataset": "generator_" + str(generator_num),
                 "batch_size": batch_size,
-                "epochs": epochs,
+                "epochs": "until convergence",
                 "latent_space_dims": latent_dims,
                 "optimizer": optimizer,
                 "learning_rate": learning_rate,

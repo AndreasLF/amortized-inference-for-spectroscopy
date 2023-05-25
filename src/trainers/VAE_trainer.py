@@ -49,7 +49,10 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
     train_loss_MSE = []
 
     # Loop through epochs 
-    for epoch in range(epochs):
+    # for epoch in range(epochs):
+    n = 0
+    no_consecutive_change = 0
+    while True:
         batch_loss = []
         batch_loss_kl = []
         batch_elbo = []
@@ -127,6 +130,29 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
                 clear_output(wait=True)
 
                 os.remove(tmp_img)
+
+        # check for convergence
+        # cons_change = 5
+
+        s = 20
+        if len(train_loss) > s*2:
+            loss_diff = abs(np.mean(train_loss[-s:]) - np.mean(train_loss[-(2*s):-s]))
+            print(loss_diff)
+            if loss_diff<0.001:
+            # if abs(np.mean(train_loss_MSE[-10]) - np.mean(train_loss_MSE[-20:-10])) < threshold:
+                break
+        #         no_consecutive_change += 1
+        #         print(no_consecutive_change)
+        #     else:
+        #         no_consecutive_change = 0
+
+        # if no_consecutive_change == cons_change:
+        #     break
+
+        if n == epochs:
+            break
+        n += 1
+
 
     train_loss = {"loss": train_loss, "kl": train_loss_kl, "elbo": train_loss_elbo, "logpx": train_loss_logpx, "MSE": train_loss_MSE}
     return autoencoder, train_loss

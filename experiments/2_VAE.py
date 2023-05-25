@@ -20,13 +20,15 @@ cuda = torch.cuda.is_available()
 
 batch_size = 100
 latent_dims_list = [2]
-epochs = 500
+epochs = 10000
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]
 generators = {1: "alpha", 2: "c", 3: ["c", "alpha"]}
-betas = [0.1, 0.5, 1, 2, 5]
+# generators = {2: "c"}
 
+# betas = [0.1, 0.5, 1, 2, 5]
+betas = [1]
 
 for generator_num, labels in generators.items():
     for learning_rate in learning_rates:
@@ -45,7 +47,8 @@ for generator_num, labels in generators.items():
                     "architecture": "VariationalAutoencoder",
                     "dataset": "generator_" + str(generator_num),
                     "batch_size": batch_size,
-                    "epochs": epochs,
+                    # "epochs": epochs,
+                    "epochs": "until convergence",
                     "latent_space_dims": latent_dims,
                     "optimizer": optimizer,
                     "learning_rate": learning_rate,
@@ -55,7 +58,7 @@ for generator_num, labels in generators.items():
                 )
 
                 # Add a tag to identify the run
-                run.tags = ["VAE", "logmu"]
+                run.tags = ["VAE", "running_avg_conv"]
 
                 #==============================================================================
                 # Load the data

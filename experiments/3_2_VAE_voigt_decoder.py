@@ -20,13 +20,16 @@ cuda = torch.cuda.is_available()
 
 batch_size = 100
 latent_dims_list = [2]
-epochs = 100
+epochs = 10000
 num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]
 generators = {3: ["c", "alpha"]}
-betas = [0.1, 0.5, 1, 2, 5]
-sigmoid_ = [True, False]
+# betas = [0.1, 0.5, 1, 2, 5]
+betas = [5]
+# betas = [1]
+sigmoid_ = [True]
+# sigmoid_ = [True]
 
 for sigmoid in sigmoid_:
     for generator_num, labels in generators.items():
@@ -47,7 +50,7 @@ for sigmoid in sigmoid_:
                         "architecture": "VariationalAutoencoderVoigtDecoder",
                         "dataset": "generator_" + str(generator_num),
                         "batch_size": batch_size,
-                        "epochs": epochs,
+                        "epochs": "until convergence",
                         "latent_space_dims": latent_dims,
                         "optimizer": optimizer,
                         "learning_rate": learning_rate,
@@ -85,6 +88,10 @@ for sigmoid in sigmoid_:
                                                             optimizer=optimizer, epochs=epochs, 
                                                             num_iterations_per_epoch=num_batches_per_epoch,
                                                             lr=learning_rate, beta=beta, label=labels, wandb_log=True)
+                    # autoencoder, train_loss = VAE_trainer(autoencoder, train_loader, 
+                    #                     optimizer=optimizer, epochs=epochs, 
+                    #                     num_iterations_per_epoch=num_batches_per_epoch,
+                    #                     lr=learning_rate, beta=beta, label=labels, wandb_log=False)
 
                     #==============================================================================
                     # Save the model

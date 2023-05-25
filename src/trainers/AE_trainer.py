@@ -42,7 +42,9 @@ def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per
     train_loss = []
 
     # Loop through epochs 
-    for epoch in range(epochs):
+    n = 0
+    while True:
+    # for epoch in range(epochs):
         batch_loss = []
         # Loop through batches of train data, one batch per epoch
         for i, (x, y) in enumerate(data):
@@ -86,5 +88,14 @@ def AE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_per
                     display(Image(filename=tmp_img))
                     clear_output(wait=True)
                     os.remove(tmp_img)
+
+        # check for convergence
+        if len(train_loss) > 2:
+            if abs(train_loss[-1] - train_loss[-2]) < 1e-4:
+                break
+
+        if n == epochs:
+            break
+        n += 1
 
     return autoencoder, train_loss
