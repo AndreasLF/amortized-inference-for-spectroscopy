@@ -2,6 +2,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib
 from src.generate_data2 import pseudoVoigtSimulatorTorch
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy import stats
+# import gaussian_filter
+from scipy.ndimage import gaussian_filter
+import matplotlib.gridspec as gridspec
+
 
 def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):    
     lab = y
@@ -23,7 +29,7 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):
         # Set the font size of the colorbar label
         cbar.ax.tick_params(labelsize=10)        # Hide sc
         sc.set_visible(False)
-        ax.set_title(f'Latent space, ${sigma_factor}\\sigma$ from $\\mu$')
+        ax.set_title(f'Latent space, ${sigma_factor}\\sigma$ from $\\mu$', fontsize=12)
         # axis labels
         ax.set_xlabel('$z_1$')
         ax.set_ylabel('$z_2$')  
@@ -92,7 +98,7 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
         ax.set_ylim(y_min, y_max)
     # margin between suptitle and figure
     plt.subplots_adjust(top=2)
-    plt.suptitle("Reconstructions of Raman spectra")
+    plt.suptitle("Reconstructions of Raman spectra", fontsize=16)
     
     plt.tight_layout()
     # plt.show()
@@ -240,6 +246,7 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
         #     axs[2, j].set_title("Latent space")
         #     axs[2, j].legend()
             # axs[2, j].set_xlabel("Wavenumber")
+    
         
 
     plt.tight_layout()
@@ -247,6 +254,7 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
 
     
 def plot_losses(train_loss, generator_num):
+    plt.clf()
     # plot 5 loses 
     fig, axs = plt.subplots(1, 5, figsize=(15, 3.5))
     for i, key in enumerate(train_loss.keys()):
@@ -255,7 +263,226 @@ def plot_losses(train_loss, generator_num):
         axs[i].set_xlabel('Epoch')
         axs[i].set_ylabel('Loss')
 
-    plt.suptitle(f"Losses for VAE (generator {generator_num})")
+    plt.suptitle(f"Losses (generator {generator_num})", fontsize=16)
+    # suptitle size
     plt.tight_layout()
+
+    return plt
+
+def plot_losses_3_2(train_loss, generator_num):
+    # plot 5 loses 
+    plt.clf()
+    gs = gridspec.GridSpec(2, 6, width_ratios=[1, 1, 1, 1, 1, 1], height_ratios=[1, 1])
+
+    fig = plt.figure(figsize=(12, 8))
+
+    subtitles = {"loss": "$-\\mathcal{L}$ (Loss)", "elbo": "$\\mathcal{L}$ (ELBO)", "kl": "$D_{KL}\\left (q(z|x)\\parallel\\mathcal{N}(0,I) \\right)$", "logpx": "$\\log p(x|z)$", "MSE": "$MSE$"}
+
+    axes = [gs[0, :2], gs[0, 2:4], gs[0, 4:6], gs[1, 1:3], gs[1, 3:5]]
+    for i, key in enumerate(train_loss.keys()):
+        ax = plt.subplot(axes[i])
+        ax.plot(train_loss[key])
+        ax.set_title(subtitles[key])
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Loss')
+        
+
+    plt.suptitle(f"Losses (generator {generator_num})", fontsize=16)
+    plt.tight_layout()
+
+    return plt
+
+
+def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
+    """ Plot reconstructions with distribution
+    
+    Args:
+        x (np.array): A batch of the data
+        x_hat_mu (np.array): A batch of the reconstructions from mu
+        mu (np.array): The mu values
+        sigma (np.array): Sigma
+        y (np.array): y values
+        generator_num (int): The generator number corresponding to which dataset is used
+        w (int, optional): Number of columns in plot grid. Defaults to 3.
+        h (int, optional): Number of rows in plot grid. Defaults to 2.
+        
+    Returns:
+        matplotlib.pyplot: The plot object
+    """
+
+    plt.clf()
+
+    # get rcparams colors from matplotlibrc
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    # w = w
+    # h = 2
+    ratio = h/w
+    # y_lim = (x[:n*n].min(), x[:n*n].max())
+    y_lim = (x[:w*h].min(), x[:w*h].max())
+
+    ps = pseudoVoigtSimulatorTorch(500)
+    ws = np.linspace(0,1,500)
+
+
+
+    fig, axs = plt.subplots(h, w, figsize=(15,15*ratio))
+
+    if generator_num != 1:
+        mm = mu[:,0][:w*h]
+        ss = sigma[:,0][:w*h]
+        # make linspace in 2 dimensions 
+        lin = np.linspace(0, 1, 100)
+        lin = np.repeat(lin[:, np.newaxis], w*h, axis=1)
+        top_hist_y_max = stats.norm.pdf(lin, mm, ss).max()
+        # print(top_hist_y_max)
+
+    if generator_num != 2:
+        if generator_num == 1:
+            mm = mu[:,0][:w*h]
+            ss = sigma[:,0][:w*h]
+        else:
+            mm = mu[:,1][:w*h]
+            ss = sigma[:,1][:w*h]
+            # make linspace in 2 dimensions 
+        lin = np.linspace(*y_lim, 100)
+        lin = np.repeat(lin[:, np.newaxis], w*h, axis=1)
+        right_hist_y_max = stats.norm.pdf(lin, mm, ss).max()
+        # print(stats.norm.pdf(lin, mm, ss).shape)
+        # print(right_hist_y_max)
+
+    for i in range(w*h):
+        if h == 1 or w == 1:
+            ax = axs[i]
+        else:
+            ax = axs[i//w, i%w]
+
+        c_ = y[:,0][i]
+        eta_ = y[:,2][i]
+        gamma_ = y[:,1][i]
+        alpha_ = y[:,3][i]
+        vp = alpha_  * ps.pseudo_voigt(500, c_, gamma_, eta_, height_normalize=True, wavenumber_normalize=True)
+
+        # plot x 
+        ax.plot(ws, x[i], color = colors[0], alpha = 0.6, label="x")
+        ax.plot(ws, vp.flatten(), color = colors[0], alpha = 1, label="pure voigt")
+        # ax.plot(x_hat[i], color = colors[1], label="reconstruction ($z$)")
+        ax.plot(ws, x_hat_mu[i], color = colors[2], label="reconstruction ($\mu$)")
+        ax.legend(frameon=True, fontsize=10)
+
+        # create new axes on the right and on the top of the current axes.
+        divider = make_axes_locatable(ax)
+        ax.set_ylim(*y_lim)
+        # axHistx = divider.append_axes("top", size=1.2, pad=0.1, sharex=ax)
+
+
+        if generator_num != 2: 
+            axHisty = divider.append_axes("right", size=1.2, pad=0.1, sharey=ax)
+
+            if generator_num == 3:
+                mu1 = mu[i][1]
+                sigma1 = sigma[i][1]
+                # z1 = z[i][1]
+            else:
+                mu1 = mu[i][0]
+                sigma1 = sigma[i][0]
+                # z1 = z[i][0]
+            axHisty.axhline(mu1, linestyle='--', alpha=0.5, color=colors[2])
+            # axHisty.axhline(z1, linestyle='--', alpha=0.5, color=colors[1])
+            # axHisty.axhline(alpha_[0], linestyle='--', alpha=0.5, color=colors[0])
+
+
+            ax.axhline(mu1, linestyle='--', alpha=0.5, color=colors[2])
+            # ax.axhline(z1, linestyle='--', alpha=0.5, color=colors[1])
+            # ax.axhline(alpha_[0], linestyle='--', alpha=0.5, color=colors[0])
+
+            # Make horizontal line 
+            # axHistx.axhline(0, linestyle='--', alpha=0.5)
+
+            linsp = np.linspace(y_lim[0], y_lim[1], 100)
+            lab = "$\\alpha$" 
+            axHisty.plot(stats.norm.pdf(linsp, mu1, sigma1),linsp, color=colors[3], label = "$p(z|x)$")
+            # axHisty.plot(0, z1, marker='o', alpha=0.5, label="$z$", color = colors[1])
+            # plot mu with a cross marker
+            axHisty.plot(0, mu1, marker='X', alpha=0.5, label="$\\mu$", color = colors[2])
+            axHisty.legend()
+            axHisty.legend(frameon=True)
+            axHisty.set_xlim(0, right_hist_y_max)
+
+        if generator_num != 1:
+            axHisty = divider.append_axes("top", size=1.2, pad=0.1, sharex=ax)
+
+            mu2 = mu[i][0]
+            sigma2 = sigma[i][0]
+            axHisty.axvline(mu2, linestyle='--', alpha=0.5, color=colors[2])
+
+            ax.axvline(mu2, linestyle='--', alpha=0.5, color=colors[2])
+
+            # Make horizontal line 
+            # axHistx.axhline(0, linestyle='--', alpha=0.5)
+
+            linsp = np.linspace(0, 1, 100)
+            lab = "$\\alpha$" 
+            axHisty.plot(linsp, stats.norm.pdf(linsp, mu2, sigma2), color=colors[3], label = "$p(z|x)$")
+            # plot mu with a cross marker
+            axHisty.plot(mu2, 0, marker='X', alpha=0.5, label="$\\mu$", color = colors[2])
+            axHisty.legend(frameon=True)
+            axHisty.set_ylim(0, top_hist_y_max)
+
+        # axHisty.set_title("Latent space")
+
+        ax.set_xlabel("$c$")
+        ax.set_ylabel("$\\alpha$")
+
+    plt.suptitle(f"Reconstructions (generator {generator_num})", fontsize=16)
+
+    plt.tight_layout()
+
+    return plt
+
+def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
+    plt.clf()
+
+    dict_ = {0: "c", 1: "\\alpha"}
+
+
+    # subplot 2x2 
+    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+
+    for i in range(2):
+        for j in range(2):
+            ax = axs[i, j]
+
+            prop_cycle = plt.rcParams['axes.prop_cycle']
+            colors = prop_cycle.by_key()['color']
+
+            # sort by sigma 
+            # idx = np.argsort(y[:,3])
+            if j == 0:
+                idx = np.argsort(y[:,3].flatten())
+            else:
+                idx = np.argsort(y[:,0].flatten())
+            y_ = y[idx]
+            alpha_ = y_[:,3]
+            c_ = y_[:,0]
+            mu_ = mu[idx]
+            # alpha_ = z_[:,1]    
+            sigma_ = sigma[idx]
+
+            # sigma_ = sigma_[:,i]
+            if j == 0:
+                ax.plot(alpha_, sigma_[:,i], alpha = 0.5, label = f"$\\sigma_{dict_[i]}$")
+                ax.plot(alpha_, gaussian_filter(sigma_[:,i], sigma=5), label = f"$\\sigma_{dict_[i]}$ smoothed")
+                ax.set_xlabel(f"$\\alpha$")
+                ax.set_title(f"$\\sigma_{dict_[i]}$ as a function of $ \\alpha$")
+
+            else:
+                ax.plot(c_, sigma_[:,i], alpha = 0.5, label = f"$\\sigma_{dict_[i]}$")
+                ax.plot(c_, gaussian_filter(sigma_[:,i], sigma=5), label = f"$\\sigma_{dict_[i]}$ smoothed")
+                ax.set_xlabel(f"$c$")
+                ax.set_title(f"$\\sigma_{dict_[i]}$ as a function of $c$")
+
+            ax.set_ylabel(f"$\\sigma_{dict_[i]}$")
+            ax.legend(frameon=True)
 
     return plt
