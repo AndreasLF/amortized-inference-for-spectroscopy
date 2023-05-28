@@ -74,7 +74,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
             log_px = reduce(px.log_prob(x))
             log_pz = reduce(pz.log_prob(z))
             log_qz = reduce(qz.log_prob(z))
-            
+
             kl = log_qz - log_pz
             elbo = log_px - kl
             beta_elbo = log_px - beta * kl
@@ -121,9 +121,9 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
                 else:
                     labels.append(y[:,ll[label]])
                     label = [label]
-
+            epoch = n
             if epoch % 10 == 0:
-                plot, fig, tmp_img = plot_loss(epoch+1, epochs, train_loss, train_loss_kl, train_loss_elbo, train_loss_logpx,  z, x, x_hat, x_hat_mu, mu, logvar, labels, label)
+                plot, fig, tmp_img = plot_loss(epoch+1, epochs, train_loss, train_loss_kl, train_loss_elbo, train_loss_logpx,  z, x, x_hat, x_hat_mu, mu, logvar, labels, label, y)
                 plot.savefig(tmp_img)
                 plot.close(fig)
                 display(Image(filename=tmp_img))
@@ -137,7 +137,7 @@ def VAE_trainer(autoencoder, data, optimizer="SGD", epochs=30, num_iterations_pe
         s = 20
         if len(train_loss) > s*2:
             loss_diff = abs(np.mean(train_loss[-s:]) - np.mean(train_loss[-(2*s):-s]))
-            print(loss_diff)
+            # print(loss_diff)
             if loss_diff<0.001:
             # if abs(np.mean(train_loss_MSE[-10]) - np.mean(train_loss_MSE[-20:-10])) < threshold:
                 break
