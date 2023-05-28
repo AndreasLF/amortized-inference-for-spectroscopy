@@ -76,6 +76,7 @@ class VariationalAutoencoder(nn.Module):
 
         self.encoder1 = nn.Linear(in_features=500, out_features=128).to(device)
         self.encoder2 = nn.ReLU().to(device)
+        self.encoder_mu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
         self.encoder_logmu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
         self.encoder_logvar = nn.Linear(in_features=128, out_features=latent_dims).to(device)
 
@@ -93,8 +94,9 @@ class VariationalAutoencoder(nn.Module):
     def _encode(self, x):
         h1 = self.encoder1(x)
         h2 = self.encoder2(h1)
-        log_mu = self.encoder_logmu(h2)
-        mu = torch.exp(log_mu)
+        # log_mu = self.encoder_logmu(h2)
+        # mu = torch.exp(log_mu)
+        mu = self.encoder_mu(h2)
         log_var = self.encoder_logvar(h2)
         return mu, log_var
 
