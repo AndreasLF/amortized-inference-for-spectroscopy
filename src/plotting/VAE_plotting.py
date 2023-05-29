@@ -8,8 +8,20 @@ from scipy import stats
 from scipy.ndimage import gaussian_filter
 import matplotlib.gridspec as gridspec
 
+suptitle_size = 20
+# Normal font weight
+suptitle_fontweight = 'normal'
+# suptitle_fontweight = 'bold'
 
-def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):    
+rcparam = {'axes.labelsize': 12,
+            'font.size': 14,
+            'legend.fontsize': 14,
+            'axes.titlesize': 16,
+            'xtick.labelsize': 12,
+            'ytick.labelsize': 12}
+plt.rcParams.update(**rcparam)
+
+def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_factor=2):    
     lab = y
 
     fig, axs = plt.subplots(1, len(label_name), figsize=(15, 7))
@@ -29,7 +41,7 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):
         # Set the font size of the colorbar label
         cbar.ax.tick_params(labelsize=10)        # Hide sc
         sc.set_visible(False)
-        ax.set_title(f'Latent space, ${sigma_factor}\\sigma$ from $\\mu$', fontsize=12)
+        ax.set_title(f'Latent space, ${sigma_factor}\\sigma$ from $\\mu$')
         # axis labels
         ax.set_xlabel('$z_1$')
         ax.set_ylabel('$z_2$')  
@@ -58,7 +70,8 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, sigma_factor=2):
             ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
             # add the ellipse to the plot
             ax.add_patch(ellipse)
-
+    #  title
+    plt.suptitle(f'Latent space (generator {generator_num})', fontsize=suptitle_size, fontweight=suptitle_fontweight)
     return plt
     
 
@@ -98,7 +111,7 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
         ax.set_ylim(y_min, y_max)
     # margin between suptitle and figure
     plt.subplots_adjust(top=2)
-    plt.suptitle("Reconstructions of Raman spectra", fontsize=16)
+    plt.suptitle("Reconstructions of Raman spectra", fontsize=suptitle_size, fontweight = suptitle_fontweight)
     
     plt.tight_layout()
     # plt.show()
@@ -263,7 +276,7 @@ def plot_losses(train_loss, generator_num):
         axs[i].set_xlabel('Epoch')
         axs[i].set_ylabel('Loss')
 
-    plt.suptitle(f"Losses (generator {generator_num})", fontsize=16)
+    plt.suptitle(f"Losses (generator {generator_num})", fontsize=suptitle_size, fontweight = suptitle_fontweight)
     # suptitle size
     plt.tight_layout()
 
@@ -274,7 +287,7 @@ def plot_losses_3_2(train_loss, generator_num):
     plt.clf()
     gs = gridspec.GridSpec(2, 6, width_ratios=[1, 1, 1, 1, 1, 1], height_ratios=[1, 1])
 
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(15, 11))
 
     subtitles = {"loss": "$-\\mathcal{L}$ (Loss)", "elbo": "$\\mathcal{L}$ (ELBO)", "kl": "$D_{KL}\\left (q(z|x)\\parallel\\mathcal{N}(0,I) \\right)$", "logpx": "$\\log p(x|z)$", "MSE": "$MSE$"}
 
@@ -287,7 +300,10 @@ def plot_losses_3_2(train_loss, generator_num):
         ax.set_ylabel('Loss')
         
 
-    plt.suptitle(f"Losses (generator {generator_num})", fontsize=16)
+    plt.suptitle(f"Losses (generator {generator_num})", fontsize=suptitle_size, fontweight = suptitle_fontweight)
+
+
+
     plt.tight_layout()
 
     return plt
@@ -434,7 +450,11 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
         ax.set_xlabel("$c$")
         ax.set_ylabel("$\\alpha$")
 
-    plt.suptitle(f"Reconstructions (generator {generator_num})", fontsize=16)
+    # bold suptitle 
+    # fig.suptitle("Reconstruction of $x$ with $z$ from $p(z|x)$", fontweight="bold")
+    plt.suptitle(f"Reconstructions (generator {generator_num})", fontsize=suptitle_size, fontweight=suptitle_fontweight)
+
+
 
     plt.tight_layout()
 
@@ -447,7 +467,7 @@ def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
 
 
     # subplot 2x2 
-    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+    fig, axs = plt.subplots(2, 2, figsize=(15, 15))
 
     for i in range(2):
         for j in range(2):
@@ -485,4 +505,48 @@ def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
             ax.set_ylabel(f"$\\sigma_{dict_[i]}$")
             ax.legend(frameon=True)
 
+    return plt
+
+def plot_kernels(autoencoder, layer_num=0):
+
+    kernels = autoencoder.encoder1[layer_num].weight.detach().cpu().numpy()
+    num_kernels = kernels.shape[0]
+
+    if num_kernels == 1:
+        # plot the kernel
+        plt.plot(kernels[0][0])
+        plt.title(f"Convolutional layer kernel")
+        plt.tight_layout()
+
+        plt.show()
+
+    else:
+        # plot the kernels. max 4 plots in a row
+        fig, axs = plt.subplots(num_kernels//4, 4, figsize=(15, 10))
+        for i in range(num_kernels):
+            ax = axs[i//4, i%4]
+            ax.plot(kernels[i][0])
+            ax.set_title(f"Channel {i+1}")
+
+        plt.suptitle(f"Convolutional layer kernels", fontsize=suptitle_size, fontweight=suptitle_fontweight)
+        plt.tight_layout()
+
+    return plt
+
+def slide_kernel_over_signal(autoencoder, signal, layer_num=0):
+    kernels = autoencoder.encoder1[layer_num].weight.detach().cpu().numpy()
+    num_kernels = kernels.shape[0]
+
+    # plot the kernels. max 4 plots in a row
+    fig, axs = plt.subplots(num_kernels//4, 4, figsize=(15, 10))
+    for i in range(num_kernels):
+        ax = axs[i//4, i%4]
+        # ax.plot(kernels[i][0])
+        ax.plot(signal.flatten(), label="signal", alpha=0.5)
+        ax.plot(np.correlate(kernels[i][0].flatten(), signal.flatten(), mode="valid"), label="convoluted signal")
+        ax.set_title(f"Channel {i+1}")
+        ax.legend(frameon=True)
+
+    plt.suptitle(f"Cross correlation between kernels and signal")
+    plt.tight_layout()
     return plt
