@@ -2,7 +2,20 @@ from matplotlib import pyplot as plt
 plt.style.use('seaborn-whitegrid')
 from src.generate_data2 import pseudoVoigtSimulatorTorch
 
-def plot_loss(train_loss, x, recons, z, labels, label_name, y, tmp_img="ae_tmp2.png"):
+suptitle_size = 20
+# Normal font weight
+suptitle_fontweight = 'normal'
+# suptitle_fontweight = 'bold'
+
+rcparam = {'axes.labelsize': 12,
+            'font.size': 14,
+            'legend.fontsize': 14,
+            'axes.titlesize': 16,
+            'xtick.labelsize': 12,
+            'ytick.labelsize': 12}
+plt.rcParams.update(**rcparam)
+
+def plot_loss(train_loss, x, recons, z, labels, label_name, y, generator_num, tmp_img="ae_tmp2.png"):
 
     z = z.detach().cpu().numpy()
     x = x.detach().cpu().numpy()
@@ -49,7 +62,7 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, tmp_img="ae_tmp2.
 
 
     # Title after first row of plots 
-    fig.suptitle('Autoencoder', fontsize=16)
+    fig.suptitle(f'Autoencoder results (generator {generator_num})', fontsize=suptitle_size, fontweight=suptitle_fontweight)
 
     ps = pseudoVoigtSimulatorTorch(500)
    
@@ -69,7 +82,7 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, tmp_img="ae_tmp2.
         ax = axs[i//width+1, i%width]
         # plot the reconstructions
         ax.plot(x[i], label='x', alpha=0.5, color = colors[0])
-        ax.plot(vp.flatten(), label='pure voigt', color = colors[0])
+        ax.plot(vp.flatten(), label='Pure Voigt', color = colors[0])
         ax.plot(recons[i], label='$\\hat{x}$', color = colors[2])
         ax.set_ylim(y_min, y_max)
         ax.set_title('Reconstruction')
