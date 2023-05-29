@@ -12,3 +12,6 @@ results/wandb
 # all pycache folders 
 __pycache__/
 *.dill
+
+# ignore .sh files, jobscripts
+*.sh
