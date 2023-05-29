@@ -11,3 +11,4 @@ results/wandb
 *.pyc
 # all pycache folders 
 __pycache__/
+*.dill
