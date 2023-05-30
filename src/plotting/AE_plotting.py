@@ -2,20 +2,33 @@ from matplotlib import pyplot as plt
 plt.style.use('seaborn-whitegrid')
 from src.generate_data2 import pseudoVoigtSimulatorTorch
 
-suptitle_size = 20
+suptitle_size = 12
 # Normal font weight
 suptitle_fontweight = 'normal'
 # suptitle_fontweight = 'bold'
 
-rcparam = {'axes.labelsize': 12,
-            'font.size': 14,
-            'legend.fontsize': 14,
-            'axes.titlesize': 16,
-            'xtick.labelsize': 12,
-            'ytick.labelsize': 12}
+rcparam = {'axes.labelsize': 4,
+            'font.size': 6,
+            'legend.fontsize': 6,
+            'axes.titlesize': 10,
+            'xtick.labelsize': 6,
+            'ytick.labelsize': 6,
+            # marker size 
+            'lines.markersize': 4
+            }
 plt.rcParams.update(**rcparam)
 
-def plot_loss(train_loss, x, recons, z, labels, label_name, y, generator_num, tmp_img="ae_tmp2.png"):
+def change_fig_size(fig, width_in_cm):
+    width, height = fig.get_size_inches()
+    fig.get_size_inches()
+    height_ratio = height / width
+
+    width_in_cm = 14
+    width_in_in = width_in_cm / 2.54
+    fig.set_size_inches(width_in_in, width_in_in * height_ratio)
+    return fig
+
+def plot_loss(train_loss, x, recons, z, labels, label_name, y, generator_num, tmp_img="ae_tmp2.png", width_in_cm = None):
 
     z = z.detach().cpu().numpy()
     x = x.detach().cpu().numpy()
@@ -27,6 +40,8 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, generator_num, tm
         width = 3
 
     fig, axs = plt.subplots(3, width, figsize=(15, 15))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
 
     # plot the loss
     axs[0, 0].plot(train_loss)

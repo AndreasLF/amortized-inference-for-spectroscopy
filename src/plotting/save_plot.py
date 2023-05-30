@@ -11,6 +11,7 @@ def save_plot(fig, path, extensions=["eps", "png"]):
     Returns:
         None
     """
+
     split = os.path.split(path)
     # folders, everything in split except last element
     folders = split[:-1]

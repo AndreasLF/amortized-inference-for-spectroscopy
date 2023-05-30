@@ -8,23 +8,40 @@ from scipy import stats
 from scipy.ndimage import gaussian_filter
 import matplotlib.gridspec as gridspec
 
-suptitle_size = 20
+suptitle_size = 12
 # Normal font weight
 suptitle_fontweight = 'normal'
 # suptitle_fontweight = 'bold'
 
-rcparam = {'axes.labelsize': 12,
-            'font.size': 14,
-            'legend.fontsize': 14,
-            'axes.titlesize': 16,
-            'xtick.labelsize': 12,
-            'ytick.labelsize': 12}
+rcparam = {'axes.labelsize': 4,
+            'font.size': 6,
+            'legend.fontsize': 6,
+            'axes.titlesize': 10,
+            'xtick.labelsize': 6,
+            'ytick.labelsize': 6,
+            # marker size 
+            'lines.markersize': 4
+            }
 plt.rcParams.update(**rcparam)
 
-def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_factor=2):    
+def change_fig_size(fig, width_in_cm):
+    width, height = fig.get_size_inches()
+    fig.get_size_inches()
+    height_ratio = height / width
+
+    width_in_cm = 14
+    width_in_in = width_in_cm / 2.54
+    fig.set_size_inches(width_in_in, width_in_in * height_ratio)
+    return fig
+
+def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_factor=2, width_in_cm=None):    
     lab = y
 
+
     fig, axs = plt.subplots(1, len(label_name), figsize=(15, 7))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
+
 
     # if label_name is a list 
     for n, lab_name in enumerate(label_name):
@@ -70,12 +87,15 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_
             ellipse = matplotlib.patches.Ellipse(xy=mean, width=width_ellipse, height=height_elipse, angle=angle, alpha=0.5, color=colors[i])
             # add the ellipse to the plot
             ax.add_patch(ellipse)
-    #  title
+        ax.scatter(mu_sorted[:, 0], mu_sorted[:, 1], c=colors, marker='x', label="$\\mu$")
+        plt.legend(frameon=True)
+
     plt.suptitle(f'Latent space (generator {generator_num})', fontsize=suptitle_size, fontweight=suptitle_fontweight)
+    plt.tight_layout()
     return plt
     
 
-def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
+def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3, width_in_cm=None):
     # get default colors    
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
@@ -88,6 +108,8 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3):
 
 
     fig, axs = plt.subplots(h, w, figsize=(15,10))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
 
     y_min, y_max = x[:h*w].min(), x[:h*w].max()
     for i in range(h*w):
@@ -266,10 +288,12 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
     return plt, fig, tmp_img
 
     
-def plot_losses(train_loss, generator_num):
+def plot_losses(train_loss, generator_num, width_in_cm=None):
     plt.clf()
     # plot 5 loses 
     fig, axs = plt.subplots(1, 5, figsize=(15, 3.5))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
     for i, key in enumerate(train_loss.keys()):
         axs[i].plot(train_loss[key])
         axs[i].set_title(key)
@@ -282,12 +306,14 @@ def plot_losses(train_loss, generator_num):
 
     return plt
 
-def plot_losses_3_2(train_loss, generator_num):
+def plot_losses_3_2(train_loss, generator_num, width_in_cm=None):
     # plot 5 loses 
     plt.clf()
     gs = gridspec.GridSpec(2, 6, width_ratios=[1, 1, 1, 1, 1, 1], height_ratios=[1, 1])
 
     fig = plt.figure(figsize=(15, 11))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
 
     subtitles = {"loss": "$-\\mathcal{L}$ (Loss)", "elbo": "$\\mathcal{L}$ (ELBO)", "kl": "$D_{KL}\\left (q(z|x)\\parallel\\mathcal{N}(0,I) \\right)$", "logpx": "$\\log p(x|z)$", "MSE": "$MSE$"}
 
@@ -309,7 +335,7 @@ def plot_losses_3_2(train_loss, generator_num):
     return plt
 
 
-def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
+def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2, width_in_cm=None):
     """ Plot reconstructions with distribution
     
     Args:
@@ -343,6 +369,8 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
 
 
     fig, axs = plt.subplots(h, w, figsize=(15,15*ratio))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
 
     if generator_num != 1:
         mm = mu[:,0][:w*h]
@@ -384,7 +412,7 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
         ax.plot(ws, vp.flatten(), color = colors[0], alpha = 1, label="pure voigt")
         # ax.plot(x_hat[i], color = colors[1], label="reconstruction ($z$)")
         ax.plot(ws, x_hat_mu[i], color = colors[2], label="reconstruction ($\mu$)")
-        ax.legend(frameon=True, fontsize=10)
+        ax.legend(frameon=True)
 
         # create new axes on the right and on the top of the current axes.
         divider = make_axes_locatable(ax)
@@ -393,7 +421,7 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
 
 
         if generator_num != 2: 
-            axHisty = divider.append_axes("right", size=1.2, pad=0.1, sharey=ax)
+            axHisty = divider.append_axes("right", size=0.6, pad=0.1, sharey=ax)
 
             if generator_num == 3:
                 mu1 = mu[i][1]
@@ -404,6 +432,9 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
                 sigma1 = sigma[i][0]
                 # z1 = z[i][0]
             axHisty.axhline(mu1, linestyle='--', alpha=0.5, color=colors[2])
+
+            
+
             # axHisty.axhline(z1, linestyle='--', alpha=0.5, color=colors[1])
             # axHisty.axhline(alpha_[0], linestyle='--', alpha=0.5, color=colors[0])
 
@@ -426,7 +457,7 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
             axHisty.set_xlim(0, right_hist_y_max)
 
         if generator_num != 1:
-            axHisty = divider.append_axes("top", size=1.2, pad=0.1, sharex=ax)
+            axHisty = divider.append_axes("top", size=0.6, pad=0.1, sharex=ax)
 
             mu2 = mu[i][0]
             sigma2 = sigma[i][0]
@@ -460,7 +491,7 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2):
 
     return plt
 
-def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
+def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y, width_in_cm=None):
     plt.clf()
 
     dict_ = {0: "c", 1: "\\alpha"}
@@ -468,6 +499,8 @@ def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
 
     # subplot 2x2 
     fig, axs = plt.subplots(2, 2, figsize=(15, 15))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
 
     for i in range(2):
         for j in range(2):
@@ -507,12 +540,15 @@ def plt_sigma_as_func_of_alpha_and_c(mu, sigma, y):
 
     return plt
 
-def plot_kernels(autoencoder, layer_num=0):
+def plot_kernels(autoencoder, layer_num=0, width_in_cm=None):
 
     kernels = autoencoder.encoder1[layer_num].weight.detach().cpu().numpy()
     num_kernels = kernels.shape[0]
 
     if num_kernels == 1:
+        if width_in_cm is not None:
+            fig = plt.figure()
+            fig = change_fig_size(fig, width_in_cm)
         # plot the kernel
         plt.plot(kernels[0][0])
         plt.title(f"Convolutional layer kernel")
@@ -523,6 +559,8 @@ def plot_kernels(autoencoder, layer_num=0):
     else:
         # plot the kernels. max 4 plots in a row
         fig, axs = plt.subplots(num_kernels//4, 4, figsize=(15, 10))
+        if width_in_cm is not None:
+            fig = change_fig_size(fig, width_in_cm)
         for i in range(num_kernels):
             ax = axs[i//4, i%4]
             ax.plot(kernels[i][0])
@@ -533,12 +571,14 @@ def plot_kernels(autoencoder, layer_num=0):
 
     return plt
 
-def slide_kernel_over_signal(autoencoder, signal, layer_num=0):
+def slide_kernel_over_signal(autoencoder, signal, layer_num=0, width_in_cm=None):
     kernels = autoencoder.encoder1[layer_num].weight.detach().cpu().numpy()
     num_kernels = kernels.shape[0]
 
     # plot the kernels. max 4 plots in a row
     fig, axs = plt.subplots(num_kernels//4, 4, figsize=(15, 10))
+    if width_in_cm is not None:
+        fig = change_fig_size(fig, width_in_cm)
     for i in range(num_kernels):
         ax = axs[i//4, i%4]
         # ax.plot(kernels[i][0])
