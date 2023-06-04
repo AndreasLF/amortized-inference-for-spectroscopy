@@ -43,4 +43,4 @@ python /zhome/51/c/155356/Desktop/armortized-inference-for-spectroscopy/experime
 # Experiment results
 Losses are logged to Weights and Biases and can be found here: https://wandb.ai/andreaslf/amortized-inference-for-spectroscopy/
 
-The trained models of the experiments are stored in the [results folder](https://github.com/AndreasLF/amortized-inference-for-spectroscopy/tree/main/results) folder. The folder is arranged into subfolders containing the different experiments.
+The trained models of the experiments are stored in a results folder.
