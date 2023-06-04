@@ -33,6 +33,7 @@ class VAE(nn.Module):
         self.encoder1 = nn.Linear(in_features=500, out_features=128).to(device)
         self.encoder2 = nn.ReLU().to(device)
         self.encoder_logmu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+        self.encoder_mu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
         self.encoder_logvar = nn.Linear(in_features=128, out_features=latent_dims).to(device)
 
         # Pseudo-voigt decoder is used instead of a neural network. See decode function
@@ -51,8 +52,9 @@ class VAE(nn.Module):
     def _encode(self, x):
         h1 = self.encoder1(x)
         h2 = self.encoder2(h1)
-        log_mu = self.encoder_logmu(h2)
-        mu = torch.exp(log_mu)
+        # log_mu = self.encoder_logmu(h2)
+        # mu = torch.exp(log_mu)
+        mu = self.encoder_mu(h2)
         log_var = self.encoder_logvar(h2)
 
         return mu, log_var
@@ -151,15 +153,50 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
     def __init__(self, input_shape, latent_dims, batch_size=100, decoder_type="alpha"):
         super(VAE_TwoParamsSigmoid, self).__init__(input_shape, latent_dims, batch_size, decoder_type)
 
+        self.input_shape = input_shape
+        self.latent_features = latent_dims
+        self.observation_features = np.prod(input_shape)
+        self.batch_size = batch_size
+
+        self.encoder1 = nn.Linear(in_features=500, out_features=128).to(device)
+        self.encoder2 = nn.ReLU().to(device)
+        self.encoder_logmu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+        self.encoder_mu = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+        self.encoder_logvar = nn.Linear(in_features=128, out_features=latent_dims).to(device)
+
+        # Pseudo-voigt decoder is used instead of a neural network. See decode function
+        # self.decoder1 = nn.Linear(in_features=latent_dims, out_features=128).to(device)
+        # self.decoder2 = nn.ReLU().to(device)
+        # self.decoder3 = nn.Linear(in_features=128, out_features=500).to(device)
+
+        self.kl = 0
+
+        self.decoder_type = decoder_type
+
+        # define the parameters of the prior, chosen as p(z) = N(0, I)
+        self.register_buffer('prior_params', torch.zeros(torch.Size([1, 2*latent_dims])))
+        
+
+    def _encode(self, x):
+        h1 = self.encoder1(x)
+        h2 = self.encoder2(h1)
+        # log_mu = self.encoder_logmu(h2)
+        # mu = torch.exp(log_mu)
+        mu = self.encoder_mu(h2)
+        log_var = self.encoder_logvar(h2)
+
+        # mu[:,0] = torch.sigmoid(mu[:,0])
+        mu_copy = mu.clone()  # Create a copy of mu
+        mu_copy[:, 0] = torch.sigmoid(mu_copy[:, 0])
+
+        return mu_copy, log_var
+
 
     def posterior(self, x:Tensor) -> Distribution:
         """return the distribution `q(x|x) = N(z | \mu(x), \sigma(x))`"""
         
         # compute the parameters of the posterior
         mu, log_var = self._encode(x)
-
-        # sigmoid transform first column, peak position
-        mu[:,0] = torch.sigmoid(mu[:,0])
 
         sigma = torch.exp(0.5 * log_var)
         log_sigma = torch.log(sigma)
@@ -187,8 +224,6 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
 
     def encode(self, x):
         mu, logvar = self._encode(x)
-        # sigmoid transform first column
-        mu[:,0] = torch.sigmoid(mu[:,0])
         # torch rsample
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
@@ -220,7 +255,7 @@ class VAE_TwoParamsSigmoid(VAE_TwoParams):
 class VAE_TwoParamsSigmoidConv(VAE_TwoParamsSigmoid):
     """Variational Autoencoder with a two parameter pseudo voigt decoder for alpha and peak position. And a convolutional encoder """
     
-    def __init__(self, input_shape, latent_dims, batch_size=100, decoder_type="alpha", out_channels = 10, kernel_size = 20, stride = 1, padding_size = 1):
+    def __init__(self, input_shape, latent_dims, batch_size=100, decoder_type="alpha", out_channels = 10, kernel_size = 20, stride = 1, padding_size = 1, encoder_num=1):
         super(VAE_TwoParamsSigmoidConv, self).__init__(input_shape, latent_dims, batch_size, decoder_type)
 
         self.input_shape = input_shape
@@ -228,16 +263,46 @@ class VAE_TwoParamsSigmoidConv(VAE_TwoParamsSigmoid):
         self.observation_features = np.prod(input_shape)
         self.batch_size = batch_size
 
-        self.encoder1 = nn.Sequential(
-            nn.Conv1d(1, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
-            nn.ReLU(),
-            nn.Flatten()
-            )
+        if encoder_num == 1:
+            self.encoder1 = nn.Sequential(
+                nn.Conv1d(1, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                nn.ReLU(),
+                nn.Flatten()
+                )
+        elif encoder_num == 2:
+            self.encoder1 = nn.Sequential(
+                nn.Conv1d(1, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                nn.Softmax(dim=1),
+                nn.Flatten()
+                )
+        elif encoder_num == 3:
+            self.encoder1 = nn.Sequential(
+                nn.Conv1d(1, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                # pooling layer
+                nn.MaxPool1d(kernel_size=2, stride=2),
+                nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                # softmax layer
+                nn.Softmax(dim=1),
+                nn.Flatten()
+                )
+        elif encoder_num == 4:
+            self.encoder1 = nn.Sequential(
+                nn.Conv1d(1, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                # pooling layer
+                nn.MaxPool1d(kernel_size=2, stride=2),
+                nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding_size),
+                # softmax layer
+                nn.ReLU(),
+                nn.Flatten()
+                )
+    
+        shape_tester = torch.zeros((batch_size, self.input_shape[0]))
+        shape = self.encoder1(shape_tester.unsqueeze(1)).shape[1]
 
-        l_in_shape = (500 + 2 * padding_size - kernel_size) // stride + 1
-        self.encoder_mu = nn.Linear(out_channels * l_in_shape, latent_dims)
-        self.encoder_logvar = nn.Linear(out_channels * l_in_shape, latent_dims)
-
+        # l_in_shape = (500 + 2 * padding_size - kernel_size) // stride + 1
+        self.encoder_mu = nn.Linear(shape, latent_dims)
+        self.encoder_logmu = nn.Linear(shape, latent_dims)
+        self.encoder_logvar = nn.Linear(shape, latent_dims)
 
         self.kl = 0
 
@@ -252,8 +317,9 @@ class VAE_TwoParamsSigmoidConv(VAE_TwoParamsSigmoid):
         h = x.unsqueeze(1)  # Add a channel dimension for 1D convolution
         h2 = self.encoder1(h)
 
-        log_mu = self.encoder_logmu(h2)
-        mu = torch.exp(log_mu)
+        # log_mu = self.encoder_logmu(h2)
+        # mu = torch.exp(log_mu)
+        mu = self.encoder_mu(h2)
 
         mu[:,0] = torch.sigmoid(mu[:,0])
 
