@@ -1,0 +1,1 @@
+The figures generated for the report can be found in the folder `figures` folder. The folder is arranged into subfolders containing the different experiment results and other figures generated.

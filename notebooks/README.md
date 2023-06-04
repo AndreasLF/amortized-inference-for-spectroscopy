@@ -1,7 +1,11 @@
 Notebooks used for testing and development
-- `AE.ipynb`: Exploration of autoencoder on Raman data
+- `AE.ipynb`: Training autoencoder on Raman data. Just a test to see if it works :)
 - `KL_Divergence.ipynb`: Exploration of KL divergence
+- `PCA.ipynb`: Exploration of PCA on Raman data including the plotting of the PCA results
+- `MSE_fit`: Exploration of MSE fit on Raman data including timing experiment and plotting
+- `plot_autoencoder_exp.ipynb`: Plotting the results of the autoencoder experiment and calculating MSE and timing results
+- `plot_vae_exp.ipynb`: Plotting the results of the VAE experiment and calculating MSE and timing results
+- `plot_vae_voigt_exp.ipynb`: Plotting the results of the VAE with Voigt decoder experiment and calculating MSE and timing results
+- `plot_vae_voigt_cnn_exp.ipynb`: Plotting the results of the VAE with Voigt decoder and CNN experiment and calculating MSE and timing results
 - `paths.py`: Defining paths to data, results, etc. Imported in the other notebookst to be able to access the other directories
-- `VAE_voigt_decoder.ipynb`: Exploration of VAE with Voigt decoder on Raman data
-- `VAE.ipynb`: Exploration of VAE on Raman data
 - `plot_data.ipynb`: Plotting the data
