@@ -1,5 +1,5 @@
 # About
-This repsoitory is part of my bachelor thesis in Artificial Intelligence and Data Science at DTU
+This repsoitory is part of my bachelor thesis in Artificial Intelligence and Data Science at DTU. The title of the thesis is "Amortized inference for spectroscopy".
 
 # Structure of repo
 The repo is structured as follows:
