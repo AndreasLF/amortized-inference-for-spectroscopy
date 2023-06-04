@@ -25,9 +25,11 @@ num_batches_per_epoch = 10
 optimizer = "adam"
 learning_rates = [0.001]
 generators = {3: ["c", "alpha"]}
-betas = [1, 2, 5]
-out_channels = [8]
-kernel_sizes = [10, 15, 20]
+betas = [1]
+out_channels = [1, 2, 4, 8]
+kernel_sizes = [10, 15, 20, 25]
+# out_channels = [1]
+# kernel_sizes =[10]
 
 for generator_num, labels in generators.items():
     for learning_rate in learning_rates:
@@ -45,7 +47,7 @@ for generator_num, labels in generators.items():
 
                             # track hyperparameters and run metadata
                             config={
-                            "architecture": "VariationalAutoencoderVoigtDecoder",
+                            "architecture": "VariationalAutoencoderVoigtDecoderCNN",
                             "dataset": "generator_" + str(generator_num),
                             "batch_size": batch_size,
                             "epochs": "until convergence",
@@ -59,7 +61,7 @@ for generator_num, labels in generators.items():
                             }
                         )
 
-                        run.tags = ["VAE_Voigt_Sigmoid_CNN", "logmu", "until convergence"]
+                        run.tags = ["VAE_Voigt_Sigmoid_CNN", "CNN_encoder_3"]
 
 
                         #==============================================================================
@@ -73,7 +75,8 @@ for generator_num, labels in generators.items():
                         #==============================================================================
                         # Define the model
                         #==============================================================================
-                        autoencoder = VAE_TwoParamsSigmoidConv(next(iter(train_loader))[0][1].shape, latent_dims, batch_size, ["c", "alpha"], out_channels = 1, kernel_size= 20).to(device) 
+                        autoencoder = VAE_TwoParamsSigmoidConv(next(iter(train_loader))[0][1].shape, latent_dims, batch_size, ["c", "alpha"], 
+                                                                out_channels = out_channel, kernel_size= kernel_size, encoder_num=3).to(device) 
 
                         #==============================================================================
                         # Train the model
