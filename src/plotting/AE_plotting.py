@@ -39,7 +39,7 @@ def plot_loss(train_loss, x, recons, z, labels, label_name, y, generator_num, tm
     if len(labels) == 2:
         width = 3
 
-    fig, axs = plt.subplots(3, width, figsize=(15, 15))
+    fig, axs = plt.subplots(3, width, figsize=(15, 12))
     if width_in_cm is not None:
         fig = change_fig_size(fig, width_in_cm)
 

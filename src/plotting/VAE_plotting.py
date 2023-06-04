@@ -38,7 +38,7 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_
     lab = y
 
 
-    fig, axs = plt.subplots(1, len(label_name), figsize=(15, 7))
+    fig, axs = plt.subplots(1, len(label_name), figsize=(15, 8))
     if width_in_cm is not None:
         fig = change_fig_size(fig, width_in_cm)
 
@@ -95,7 +95,7 @@ def plt_latent_space_ellipses(z, mu, sigma, y, label_name, generator_num, sigma_
     return plt
     
 
-def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3, width_in_cm=None):
+def plt_reconstructions(x, x_hat, x_hat_mu, y, generator_num,  n=3, width_in_cm=None):
     # get default colors    
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
@@ -133,7 +133,7 @@ def plt_reconstructions(x, x_hat, x_hat_mu, y, n=3, width_in_cm=None):
         ax.set_ylim(y_min, y_max)
     # margin between suptitle and figure
     plt.subplots_adjust(top=2)
-    plt.suptitle("Reconstructions of Raman spectra", fontsize=suptitle_size, fontweight = suptitle_fontweight)
+    plt.suptitle(f"Reconstructions (generator {generator_num})", fontsize=suptitle_size, fontweight = suptitle_fontweight)
     
     plt.tight_layout()
     # plt.show()
@@ -158,7 +158,7 @@ def plot_loss(epoch, epochs, loss, loss_kl, loss_elbo, loss_logpx,  z, x, recons
     z = z.to('cpu').detach().numpy()
     
     width = 4
-    fig, axs = plt.subplots(3, width, figsize=(15, 15))
+    fig, axs = plt.subplots(3, width, figsize=(15, 10))
 
     # Figure title above all subplots
     # fig.suptitle(f"Epoch {epoch} of {epochs}")
@@ -311,7 +311,7 @@ def plot_losses_3_2(train_loss, generator_num, width_in_cm=None):
     plt.clf()
     gs = gridspec.GridSpec(2, 6, width_ratios=[1, 1, 1, 1, 1, 1], height_ratios=[1, 1])
 
-    fig = plt.figure(figsize=(15, 11))
+    fig = plt.figure(figsize=(15, 10))
     if width_in_cm is not None:
         fig = change_fig_size(fig, width_in_cm)
 
@@ -360,6 +360,8 @@ def plt_recons_with_dist(x, x_hat_mu, mu, sigma, y, generator_num, w=3, h=2, wid
     # w = w
     # h = 2
     ratio = h/w
+    if generator_num == 1:
+        ratio = ratio*0.8
     # y_lim = (x[:n*n].min(), x[:n*n].max())
     y_lim = (x[:w*h].min(), x[:w*h].max())
 
